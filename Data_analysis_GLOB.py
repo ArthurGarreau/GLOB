@@ -85,7 +85,7 @@ plt.savefig('Fig 1 Linear regression daily GLOB K&Z.png', dpi=300)
 plt.close()
 """
 # %%  Beam irradiance calculation
-import functions as fct
+import glob_functions as fct
 date = '2024-04-14'
 
 df_glob_one_day = ds_glob.sel(Timestamp=date).to_pandas()
