@@ -7,6 +7,7 @@ Created on Wed Nov  6 14:33:44 2024
 Contact: arthurg@unis.no
 """
 
+
 # %% FUNCTION FOR GLOB CALCULATIONS %%
 
 
@@ -14,41 +15,6 @@ import numpy as np
 import pvlib
 import pandas as pd
 
-
-def calculate_hour_angle(time, latitude, longitude, timezone='UTC'):
-    """
-    Calculate the hour angle of the Sun for a given time, latitude, and longitude.
-
-    Parameters:
-    - time: pd.Timestamp or str, Time of observation (in UTC).
-    - latitude: float, Latitude of the location.
-    - longitude: float, Longitude of the location.
-    - timezone: str, Time zone of the location (default is 'UTC').
-
-    Returns:
-    - hour_angle: float, Hour angle of the Sun in degrees.
-    """
-    # Convert the time to a pandas Timestamp if it's a string
-    if isinstance(time, str):
-        time = pd.to_datetime(time)
-
-    # Create a timezone-aware datetime object
-    time = time.tz_localize('UTC').tz_convert(timezone)
-    
-    # Convert date_str to a pandas Timestamp (at midnight)
-    start_time = pd.to_datetime(time[0].date())
-    
-    # Generate a time range for every minute of the given day
-    time_vector = pd.date_range(start=start_time, periods=1440, freq='min')  # 1440 minutes in a day
-    solar_position = pvlib.solarposition.get_solarposition(time_vector, latitude, longitude)
-    solar_noon = solar_position['zenith'].idxmin()
-    solar_noon = solar_noon.tz_localize('UTC')
-
-
-    # Calculate the hour angle (H = 15° * timedelta)
-    hour_angle = (time - solar_noon) / pd.Timedelta(hours=1) * 15
-    
-    return hour_angle
 
 def incidence_angle(phi, beta, delta, omega, gamma):
     """
@@ -68,16 +34,15 @@ def C_B_lambda(phi, beta, delta, omega, gamma):
     Calculate the geometry coefficient for Beam irradiance (C_{B, lambda}).
     """
     cos_theta = np.array(np.cos(incidence_angle(phi, beta, delta, omega, gamma)))
-    # cos_theta[cos_theta<0] = 0
+    cos_theta[cos_theta<0] = np.nan
     return cos_theta  # Only positive values contribute to irradiance
 
-def C_D_lambda(phi, beta, delta, omega, gamma):
+def C_D_lambda(beta):
     """
     Calculate the geometry coefficient for Diffuse irradiance (C_{D, lambda}).
     Assumes isotropic diffuse model.
     """
-    return 0.5 * (1 + np.cos(beta)) * (1 + np.sin(beta/2)) * (1 + C_B_lambda(phi, beta, delta, omega, gamma)**2 
-                                                              * np.sin(incidence_angle(phi, 0, delta, omega, gamma)))
+    return 0.5 * (1 + np.cos(beta))
 
 def C_R_lambda(beta):
     """
@@ -112,16 +77,16 @@ def I_B_n(df_T, C_B_df, C_D_df, C_R_df, rho):
     C_R_N = C_R_df["North"]
 
     # Calculate numerators and denominators including North component
-    numerator1 = ((I_T_E - I_T_h * rho * C_R_E) * C_D_S - (I_T_S - I_T_h * rho * C_R_S) * C_D_E)
+    numerator1 = ((I_T_E) * C_D_S - (I_T_S) * C_D_E)
     denominator1 = C_D_S * C_B_E - C_B_S * C_D_E
     
-    numerator2 = ((I_T_S - I_T_h * rho * C_R_S) * C_D_W - (I_T_W - I_T_h * rho * C_R_W) * C_D_S)
+    numerator2 = ((I_T_S) * C_D_W - (I_T_W) * C_D_S)
     denominator2 = C_D_W * C_B_S - C_B_W * C_D_S
     
-    numerator3 = ((I_T_W - I_T_h * rho * C_R_W) * C_D_N - (I_T_N - I_T_h * rho * C_R_N) * C_D_W)
+    numerator3 = ((I_T_W) * C_D_N - (I_T_N) * C_D_W)
     denominator3 = C_D_N * C_B_W - C_B_N * C_D_W
     
-    numerator4 = ((I_T_N - I_T_h * rho * C_R_N) * C_D_E - (I_T_E - I_T_h * rho * C_R_E) * C_D_N)
+    numerator4 = ((I_T_N) * C_D_E - (I_T_E) * C_D_N)
     denominator4 = C_D_E * C_B_N - C_B_E * C_D_N
     
 
@@ -130,10 +95,11 @@ def I_B_n(df_T, C_B_df, C_D_df, C_R_df, rho):
     
 
     # Calculate values for different time ranges
-    result.loc[(result.index.hour >= 11) & (result.index.hour < 17)] = (numerator1 + numerator2) / (denominator1 + denominator2)
-    result.loc[(result.index.hour >= 17) & (result.index.hour < 23)] = (numerator2 + numerator3) / (denominator2 + denominator3)
-    result.loc[(result.index.hour >= 5) & (result.index.hour < 11)] = (numerator3 + numerator4) / (denominator3 + denominator4)
-    result.loc[(result.index.hour >= 23) | ((result.index.hour >= 0) & (result.index.hour < 5))] = (numerator4 + numerator1) / (denominator4 + denominator1)
+    result.loc[(result.index.hour >= 11) & (result.index.hour < 17)] = (numerator1 ) / (denominator1)
+    result.loc[(result.index.hour >= 17) & (result.index.hour < 23)] = (numerator2 ) / (denominator2 )
+    result.loc[(result.index.hour >= 5) & (result.index.hour < 11)] = (numerator3 ) / (denominator3 )
+    result.loc[(result.index.hour >= 23) | ((result.index.hour >= 0) & (result.index.hour < 5))] \
+        = (numerator4) / (denominator4)
 
     return result
 
