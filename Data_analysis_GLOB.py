@@ -14,7 +14,7 @@ import numpy as np
 from scipy.stats import linregress
 import matplotlib.pyplot as plt
 import os
-os.chdir('C:/Users/arthurg/OneDrive - NTNU/Workspace/PAPER_2_Data_Analysis/GLOB_scripts')
+os.chdir('C:/Users/arthurg/OneDrive - Universitetssenteret på Svalbard AS/Documents/UNIS_PhD/PAPER_2/PAPER_2_Data_Analysis/GLOB_scripts')
 
 import pvlib
 
