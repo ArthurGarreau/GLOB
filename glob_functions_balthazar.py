@@ -14,6 +14,7 @@ Contact: arthurg@unis.no
 import numpy as np
 import pvlib
 import pandas as pd
+from itertools import combinations
 
 
 def incidence_angle(phi, beta, delta, omega, gamma):
@@ -29,11 +30,11 @@ def incidence_angle(phi, beta, delta, omega, gamma):
     )
     return theta
 
-def C_B_lambda(phi, beta, delta, omega, gamma):
+def C_B_lambda(phi, beta, delta, omega, gamma_surface):
     """
     Calculate the geometry coefficient for Beam irradiance (C_{B, lambda}).
     """
-    cos_theta = np.array(np.cos(incidence_angle(phi, beta, delta, omega, gamma)))
+    cos_theta = np.array(np.cos(incidence_angle(phi, beta, delta, omega, gamma_surface)))
     cos_theta[cos_theta<0] = np.nan
     return cos_theta  # Only positive values contribute to irradiance
 
@@ -155,6 +156,111 @@ def I_R(df_T, beta, rho):
     result.loc[(result.index.hour >= 14) & (result.index.hour < 20)] = I_T_h * C_R_df['East'] * rho
 
     return result
+
+
+def create_variable_dict(variables):
+    """
+    Create a dictionary structure mapping variables to their azimuth and beta values.
+
+    Parameters:
+        variables (list): List of variable names.
+
+    Returns:
+        dict: A dictionary with variable names as keys and their attributes as values.
+    """
+    azimuth_mapping = {
+        'S': 180,
+        'SW': 225,
+        'W': 270,
+        'NW': 315,
+        'N': 0,
+        'NE': 45,
+        'E': 90,
+        'SE': 135
+    }
+
+    variable_dict = {}
+
+    for var in variables:
+        if var == 'GHI':
+            variable_dict[var] = {'Azimuth': 0, 'Beta': 0}
+            continue
+
+        parts = var.split('_')
+        direction = parts[0]
+        beta = int(parts[1])
+        azimuth = azimuth_mapping.get(direction, None)
+
+        variable_dict[var] = {'Azimuth': azimuth, 'Beta': beta}
+
+    return variable_dict
+
+def find_best_estimation(combinations_2, glob_value, NYA_value, orientations_dict, ds_glob):
+    """
+    Find the X_estim with the minimal error compared to X_truth.
+
+    Parameters:
+        combinations_2 (list): List of tuples containing index pairs.
+        glob_value (dict): Dictionary with global irradiance values.
+        NYA_value (dict): Dictionary with true direct and diffuse irradiance values.
+        orientations_dict (dict): Dictionary with azimuth and beta values for orientations.
+        ds_glob (object): Data structure containing latitude and other parameters.
+
+    Returns:
+        tuple: Best combination and the corresponding X_estim.
+    """
+    min_error = float('inf')
+    best_combination = None
+    best_X_estim = None
+
+    X_truth = np.array([NYA_value['DIR [W/m**2]'], NYA_value['DIF [W/m**2]']])
+
+    for comb in combinations_2:
+        i, j = comb
+        
+        # Y values from the combination
+        Y = np.array([glob_value[i], glob_value[j]])
+
+        # Calculate coefficients for the combination
+        b_i = C_B_lambda(ds_glob.latitude, orientations_dict[i]['Beta'],
+                             glob_value['declination'], glob_value['hour_angle'],
+                             orientations_dict[i]['Azimuth'])
+        b_j = C_B_lambda(ds_glob.latitude, orientations_dict[j]['Beta'], 
+                             glob_value['declination'], glob_value['hour_angle'], 
+                             orientations_dict[j]['Azimuth'])
+        d_i = C_D_lambda(orientations_dict[i]['Beta'])
+        d_j = C_D_lambda(orientations_dict[j]['Beta'])
+
+        # Create the matrix A and its inverse
+        A = np.array([[b_i, b_j],
+                      [d_i, d_j]])
+        A_moins_un = np.linalg.inv(A)
+
+        # Estimate X_estim
+        X_estim = np.matmul(A_moins_un, Y)
+
+        # Calculate the error (mean squared error)
+        error = np.mean(np.abs(X_truth - X_estim))
+        # Update the best result if the current error is smaller
+        if error < min_error:
+            min_error = error
+            best_combination = comb
+            best_X_estim = X_estim
+        
+        
+        print(best_X_estim, X_truth)
+
+    return best_combination, best_X_estim
+
+
+
+
+
+
+
+
+
+
 
 
 
