@@ -169,7 +169,7 @@ def find_best_estimation(combinations_2, glob_value, NYA_value, orientations_dic
             best_X_estim = X_estim
             A_opt = A_moins_un
 
-        # Print the current estimation vs truth for analysis
+    # Print the current estimation vs truth for analysis
     print(f"Timestamp: {timestamps[0]} Combination {best_combination}: Estimated = {np.squeeze(best_X_estim)}, Truth = {np.squeeze(X_truth)}, Error = {np.squeeze(min_error)}")
 
     return best_combination, best_X_estim
