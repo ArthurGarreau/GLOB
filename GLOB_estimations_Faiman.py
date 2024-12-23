@@ -45,7 +45,7 @@ df_NYA.index = df_NYA.index.tz_localize('UTC')
 
 # %%  Beam irradiance calculation
 from itertools import combinations
-import glob_functions_faiman as fct
+import glob_functions_Faiman as fct
 
 dates = pd.date_range(start="2024-05-07", end="2024-05-15", freq="D", tz="UTC")
 
