@@ -3,160 +3,216 @@
 Created on Fri Nov 22 14:35:35 2024
 
 @author: arthurg
-
 Contact: arthurg@unis.no
+
+Description:
+This script calculates beam and diffuse irradiance using the Faiman et al. (1992) method.
+It processes GLOB and K&Z data, estimates irradiance components, and generates plots.
 """
 
-# Method inspired by Faiman et al. (1992)
-# Faiman, D., D. Feuermann, P. Ibbetson, and A. Zemel, 1992: A multipyranometer instrument for obtaining the solar beam and diffuse components, and the irradiance on inclined planes. Solar Energy, 48, 253–259, https://doi.org/10.1016/0038-092X(92)90099-V.
-
-
-# %% Load libraries
-
+# %% Load Libraries
 import xarray as xr
 import pandas as pd
 import numpy as np
-from scipy.stats import linregress
 import matplotlib.pyplot as plt
-import os
 from pathlib import Path
-import pvlib
 import sys
+from itertools import combinations
+
+# Add custom script path
 sys.path.append(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\GLOB_scripts")
 
-
-# %% Load data
+# %% Load Data
 data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data")
 
-# GLOB data NetCDF 
+# Load GLOB data
 ds_glob = xr.open_dataset(data_path / r"GLOB\GLOB_data_angles_5min.nc")
-# K&Z data Adventdalen
+lat_glob = ds_glob.latitude.values
+lon_glob = ds_glob.longitude.values
+
+# Load K&Z data
 ds_kz = xr.open_dataset(data_path / r"Irradiance_ncdf\Adventdalen_global_horizontal_irradiances_LW_SW_all.nc")
 
-# Ny-Ålesund data 
-file_path_nya = data_path / r"Irradiance\NYA_radiation_2006-05_2024-10.csv"
-df_NYA = pd.read_csv(file_path_nya,sep='\t',skiprows=23, encoding='utf-8')
-df_NYA.rename(columns={'Date/Time': 'Timestamp'}, inplace=True)
-df_NYA['Timestamp'] = pd.to_datetime(df_NYA['Timestamp'], format='%Y-%m-%dT%H:%M')
-df_NYA = df_NYA[df_NYA['Timestamp'].dt.year >= 2023]
-df_NYA.set_index('Timestamp', inplace=True)
-df_NYA.index = df_NYA.index.tz_localize('UTC')
+# %% Beam and Diffuse Irradiance Calculation
+import glob_functions_Faiman_2 as fct
 
+# Define criteria and date range
+Criteria = "ERBS"
+dates = pd.date_range(start="2024-04-14", end="2024-04-14", freq="D", tz="UTC")
 
-# %%  Beam irradiance calculation
-from itertools import combinations
-import glob_functions_Faiman as fct
+# Variables of interest for irradiance calculation
+variables = [
+    'GHI', 'S_45', 'S_90', 'S_135', 'SW_45', 'SW_90', 'SW_135', 'W_45', 'W_90', 'W_135',
+    'NW_45', 'NW_90', 'NW_135', 'N_45', 'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135',
+    'E_45', 'E_90', 'E_135', 'SE_45', 'SE_90', 'SE_135'
+]
 
-dates = pd.date_range(start="2024-05-07", end="2024-05-15", freq="D", tz="UTC")
-
-
+# Generate all combinations of variables
+combs = list(combinations(variables, 2))
 for date in dates: 
     date=date.strftime('%Y-%m-%d')
     
     df_glob_one_day = ds_glob.sel(Timestamp=date).to_pandas()
     df_glob_one_day.index = df_glob_one_day.index.tz_localize('UTC')
-    
-    
-    # Define the 25 variables of interest
-    variables = ['GHI', 'S_45', 'S_90', 'S_135', 'SW_45', 'SW_90',
-                 'SW_135', 'W_45', 'W_90', 'W_135', 'NW_45', 'NW_90', 'NW_135',
-                 'N_45', 'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45',
-                 'E_90', 'E_135', 'SE_45', 'SE_90', 'SE_135']
-    
-    # Generate all possible combinations of 2 variables
-    combinations_2 = list(combinations(variables, 2))
-    
-    orientations_dict = fct.create_variable_dict(variables)
-    
+
+    # Generate all possible combinations
+    combs = list(combinations(variables, 2))
+        
     # Prepare to store the results
     results = []
     
     # Loop over each minute in the day
-    timestamps = pd.date_range(start=f"{date} 07:00:00", end=f"{date} 17:00:00", freq='10min', tz='UTC')
-    for timestamp in timestamps:
+    TIMESTAMPS = pd.date_range(start=f"{date} 00:00:00", end=f"{date} 23:50:00", freq='10min', tz='UTC')
+    for timestamp in TIMESTAMPS:
         timestamp = pd.DatetimeIndex([timestamp])  # Ensure timestamp is in the desired format
         glob_value = df_glob_one_day.loc[timestamp]
-        NYA_value = df_NYA.loc[timestamp]
-    
-        # Find the best combination and corresponding estimates
-        best_combination, best_X_estim = fct.find_best_estimation(
-            combinations_2, glob_value, NYA_value, orientations_dict, ds_glob
-        )
-    
-        if best_X_estim is not None:
-            # Append the results for this timestamp
-            results.append({
-                'Timestamp': timestamp[0],
-                'Beam': best_X_estim[0][0],  # Beam value
-                'Diffuse': best_X_estim[1][0],  # Diffuse value
-                'Best_Combination': best_combination,
-                'NYA_Beam': NYA_value['DIR [W/m**2]'].iloc[0],
-                'NYA_Diffuse': NYA_value['DIF [W/m**2]'].iloc[0]
-            })
-        else:
-            # Handle cases where no valid estimation is found
-            results.append({
-                'Timestamp': timestamp[0],
-                'Beam': np.nan,
-                'Diffuse': np.nan,
-                'Best_Combination': np.nan,
-                'NYA_Beam': NYA_value['DIR [W/m**2]'].iloc[0] if not NYA_value['DIR [W/m**2]'].isna().iloc[0] else np.nan,
-                'NYA_Diffuse': NYA_value['DIF [W/m**2]'].iloc[0] if not NYA_value['DIF [W/m**2]'].isna().iloc[0] else np.nan
-            })
         
+        # Calculate the solar position
+        solar_position = fct.calculate_solar_angles(timestamp, lat_glob, lon_glob)
+        # Extract the zenith angle
+        zenith_angle = solar_position['apparent_zenith'].values[0]
+ 
+        # Use the optimized function
+        D, I, comb_opt = fct.find_best_combination(combs, glob_value, zenith_angle, lat_glob, lon_glob)
+            
+        D = round(D,0)
+        I = round(I,0)
+        zenith_angle = round(zenith_angle, 2)
         
+        # Append the results for this timestamp
+        results.append({
+            'Timestamp': timestamp[0],
+            'Beam': I,  # Beam value
+            'Diffuse': D,  # Diffuse value
+            'Best_Combination': comb_opt, # Pyrano combination used for best_estim
+            'Solar zenith (°)': zenith_angle
+        })
+
+        print(f"Timestamp: {timestamp[0].strftime('%Y-%m-%d %H:%M:%S')} | I={I} and D={D} W/m2 | Combination:{comb_opt}")
+
     # Convert results to a DataFrame
     results_df = pd.DataFrame(results)
-    
-    results_df.to_csv(data_path / "GLOB" / f"best_estimations_{date}.csv", index=False)
-
-# # Accessing values
-# print(orientations_dict['S_45']['Azimuth'])  # Output: 180
-# print(orientations_dict['NE_90']['Beta'])  
+    results_df.to_csv(data_path / "GLOB" / "Best_estimations_Faiman" / f"best_estimations_{date}_{Criteria}.csv", index=False)
 
 
-# %% Plot Beam, Diffuse, NYA_Beam, and NYA_Diffuse over time
-
+# %% Plot Beam, Diffuse, and Global irradiances estimated by GLOB
 import matplotlib.dates as mdates
 
-dates = pd.date_range(start="2024-05-07", end="2024-05-15", freq="D", tz="UTC")
+# dates = pd.date_range(start="2024-05-01", end="2024-05-01", freq="D", tz="UTC")
 
 for date in dates:
         
     date=date.strftime('%Y-%m-%d')
-    results_df = pd.read_csv(data_path / "GLOB" / f'best_estimations_{date}.csv')  # Adjust path as needed
-    
+    results_df = pd.read_csv(data_path / "GLOB" / "Best_estimations_Faiman" / f'best_estimations_{date}_{Criteria}.csv')  # Adjust path as needed
     results_df['Timestamp'] = pd.to_datetime(results_df['Timestamp'])
+    timestamps = results_df['Timestamp']
+    
+    GHI = ds_glob['GHI'].sel(Timestamp=date).to_pandas()
+    zenith = np.deg2rad(results_df['Solar zenith (°)'])
     
     plt.figure(figsize=(9, 6))
-    
-    # Plot Beam
-    plt.plot(results_df['Timestamp'], results_df['Beam'], label='Longyearbyen Beam', color='orange')
-    # Plot Diffuse
-    plt.plot(results_df['Timestamp'], results_df['Diffuse'], label='Longyearbyen Diffuse', color='blue')
-    # Plot NYA_Beam
-    plt.plot(results_df['Timestamp'], results_df['NYA_Beam'], label='Ny-Ålesund Beam', color='orange', linestyle='--')
-    # Plot NYA_Diffuse
-    plt.plot(results_df['Timestamp'], results_df['NYA_Diffuse'], label='Ny-Ålesund Diffuse', color='blue', linestyle='--')
-    
+    # 
+    # Plot LYR Beam
+    plt.plot(results_df['Timestamp'], results_df['Beam'], label='Beam from GLOB', color='orange')
+    # Plot LYR Diffuse
+    plt.plot(results_df['Timestamp'], results_df['Diffuse'], label='Diffuse from GLOB', color='blue')
+    # Plot LYR Global
+    plt.plot(GHI, label='Global measured with Kipp&Zonen', color='black', alpha=0.5)
+    plt.plot(results_df['Timestamp'], np.cos(zenith)*results_df['Beam']+results_df['Diffuse'], 
+             label='Global = cos(z).Beam + Diffuse\nfrom GLOB', color='black')
+  
     # Customize the plot
-    plt.title(f'Beam and Diffuse Components on {date}', fontsize=16)
-    plt.xlabel('Time (UTC)', fontsize=14)
-    plt.ylabel('Irradiance (W/m²)', fontsize=14)
-    plt.legend(fontsize=12)
-    plt.grid(True)
-    
+    plt.xlabel(f'Time (UTC)\n{date}', fontsize=14); plt.ylabel('Irradiance [W m²]', fontsize=14)
+    plt.legend(fontsize=9)
+    plt.grid(True, linestyle=':')
+    # plt.tight_layout()
+
     # Set hourly ticks
-    plt.gca().xaxis.set_major_locator(mdates.HourLocator())  # Tick every hour
+    plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=3))  # Tick every hour
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))  # Format as HH:MM
-    plt.xticks(fontsize=12, rotation=45)
+    plt.xticks(fontsize=12)
     plt.yticks(fontsize=12)
     
     # Show the plot
-    plt.tight_layout()
-    
-    save_path = "C:/Users/arthurg/OneDrive - Universitetssenteret på Svalbard AS/Documents/UNIS_PhD/PAPER_2/PAPER_2_Data_Analysis/Fig/"
-    plt.savefig(save_path + f"Estim_Faiman_{date}")
+    save_path = "C:/Users/arthurg/OneDrive - Universitetssenteret på Svalbard AS/Documents/UNIS_PhD/PAPER_2/PAPER_2_Data_Analysis/Fig/Estim_Faiman/"
+    plt.savefig(save_path + f"Estim_Faiman_{Criteria}_{date}")
     plt.close()
     
-    
+# %% Plot Global Vs. reconstructed Global
+
+
+import numpy as np
+import matplotlib.dates as mdates
+from sklearn.linear_model import Ridge
+from sklearn.metrics import r2_score
+
+dates = pd.date_range(start="2024-04-14", end="2024-07-30", freq="D", tz="UTC")
+df_LYR_ghi = ds_kz["SWdown"].to_dataframe()
+df_LYR_ghi = df_LYR_ghi.tz_localize('UTC')
+df_LYR_ghi = df_LYR_ghi.sort_index()
+# Lists to store data for plotting
+all_timestamps = []
+all_global_kz = []
+all_global_construct = []
+
+# Accumulate data for each date
+for date in dates:
+    date_str = date.strftime('%Y-%m-%d')
+    results_df = pd.read_csv(data_path / "GLOB" / "Best_estimations_Faiman" / f'best_estimations_{date_str}_ERBS.csv')
+
+    # Convert the Timestamp column to datetime
+    results_df['Timestamp'] = pd.to_datetime(results_df['Timestamp'])
+
+    # Select the relevant data from df_LYR_ghi
+    timestamps = results_df['Timestamp']
+    df_LYR_ghi_sel = df_LYR_ghi.loc[timestamps[0]:timestamps.iloc[-1]]
+    df_LYR_ghi_sel = df_LYR_ghi_sel.rename(columns={"SWdown": "Global K&Z"})
+
+    # Calculate the irradiance
+    zenith_rad = np.deg2rad(results_df['Solar zenith (°)'])
+    results_df["Constructed Global"] = np.cos(zenith_rad) * results_df['Beam'] + results_df['Diffuse']
+
+    results_df = pd.merge(df_LYR_ghi_sel, results_df, how='inner', left_on='time', right_on='Timestamp')
+    # Append data to lists
+    all_global_kz.extend(results_df['Global K&Z'])
+    all_global_construct.extend(results_df['Constructed Global'])
+
+
+# Create a mask for non-NaN values
+mask = ~np.isnan(all_global_kz) & ~np.isnan(all_global_construct)
+all_global_kz = np.array(all_global_kz); all_global_construct = np.array(all_global_construct)
+# Filter the data
+all_global_kz = all_global_kz[mask]
+all_global_construct = all_global_construct[mask]
+# %
+# Plot all data
+plt.figure(figsize=(12, 8))
+# Set font size for all elements
+plt.rcParams.update({'font.size': 12})
+# Create scatter plot
+plt.scatter(all_global_kz, all_global_construct, marker='.', color='k', alpha=0.5)
+# Plot the line x = y
+plt.plot([min(all_global_kz), max(all_global_kz)], [min(all_global_kz), max(all_global_kz)], color='red', linestyle='--', 
+         label='x = y')
+# Use Ridge Regression for better numerical stability
+model = Ridge(alpha=1e-3)  # alpha is the regularization strength
+model.fit(all_global_kz.reshape(-1, 1), all_global_construct)
+regression_line = model.predict(all_global_kz.reshape(-1, 1))
+coefficients = model.coef_[0]
+intercept = model.intercept_
+r2 = r2_score(all_global_kz, regression_line)
+
+# Plot the regression line
+plt.plot(all_global_kz, regression_line, color='red', 
+         label=f'Regression\n y = {coefficients:.2f}.x + {intercept:.2f} | $R^2$: {r2:.2f}')
+# Show plot
+plt.show()
+plt.xlabel('Constructed Global from GLOB (W/m²)')
+plt.ylabel('Global from Kipp&Zonen (W/m²)')
+plt.title('Data from 2024')
+plt.legend()
+plt.grid(True, linestyle=':')
+plt.show()
+save_path = "C:/Users/arthurg/OneDrive - Universitetssenteret på Svalbard AS/Documents/UNIS_PhD/PAPER_2/PAPER_2_Data_Analysis/Fig/"
+# plt.savefig(save_path + f"Regression_KZ_GLOB")
+# plt.close()

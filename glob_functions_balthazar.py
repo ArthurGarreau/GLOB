@@ -14,7 +14,6 @@ Contact: arthurg@unis.no
 import numpy as np
 import pvlib
 import pandas as pd
-from itertools import combinations
 
 
 def incidence_angle(phi, beta, delta, omega, gamma):
