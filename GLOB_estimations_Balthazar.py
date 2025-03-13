@@ -9,7 +9,6 @@ Contact: arthurg@unis.no
 # Method inspired by Baltazar et al. (2014).
 # Baltazar, J.-C., Y. Sun, and J. Haberl, 2014: Improved Methodology to Measure Normal Incident Solar Radiation with a Multi-pyranometer Array. Energy Procedia, 57, 1211–1219, https://doi.org/10.1016/j.egypro.2014.10.109.
 
-
 # %% Load libraries
 
 import xarray as xr
