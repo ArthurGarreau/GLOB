@@ -34,7 +34,7 @@ lon_glob = ds_glob.longitude.values
 ds_kz = xr.open_dataset(data_path / r"Irradiance_ncdf\Adventdalen_global_horizontal_irradiances_LW_SW_all.nc")
 
 # %% Beam and Diffuse Irradiance Calculation
-import glob_functions_Faiman_2 as fct
+import glob_functions_Faiman as fct
 
 # Define criteria and date range
 Criteria = "ERBS"
