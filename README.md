@@ -103,11 +103,13 @@ python Data_analysis_GLOB.py
 python GLOB_Polar_Heatmap.py
 python GLOB_estimations_Faiman_LYR.py
 python GLOB_estimations_Faiman_NYA.py
+```
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contact
-Arthur Garreau - arthurg@unis.no
+Arthur G - [arthurg@unis.no](mailto:arthurg@unis.no)
 
-Project Link: https://github.com/ArthurGarreau/GLOB
+Project Link: [https://github.com/ArthurGarreau/GLOB](https://github.com/ArthurGarreau/GLOB)
