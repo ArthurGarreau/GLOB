@@ -56,26 +56,28 @@ The following table describes the variable names in the data files together with
 
 ## Scripts
 
+## Scripts
+
 ### `CALC_irradiance_multiorient.py`
-This script calculates the irradiance for multiple orientations based on the data collected by the GLOB instrument.
+Calculates solar irradiance for multiple orientations using Faiman et al. (1992) method. Loads data from CSV files, computes angles, filters negative values, and saves results to CSV.
+
+### `GLOB_estimations_Faiman_LYR.py` and `GLOB_estimations_Faiman_NYA.py`
+Calculates beam and diffuse irradiance for GLOB data in Longyearbyen/Ny-Ålesund using Faiman et al. (1992) method. Processes NetCDF data, generates plots, and compares results with reference data.
+
+### `CREATE_ncdf_GLOB_data_LYR.py` and `CREATE_ncdf_GLOB_data_NYA.py`
+Processes GLOB data from CSV files, calculates solar angles, computes surface albedo, and converts data to NetCDF format with metadata.
 
 ### `PLOT_irradiance_multiorient_polar_plot.py`
-This script generates polar plots to visualize the irradiance data from different orientations.
+Generates visualizations, including polar heatmaps and time series plots, to analyze irradiance components from GLOB data.
 
-### `Data_analysis_GLOB.py`
-This script performs various data analysis tasks on the GLOB dataset, including cleaning, processing, and summarizing the data.
+### `PROCESS_GLOB_csvdata.py`
+Processes raw GLOB data from CSV files, standardizes naming conventions, converts timestamps to UTC, and writes processed data to new CSV files.
 
 ### `GLOB_Polar_Heatmap.py`
-This script creates polar heatmaps to visualize the distribution of solar irradiance across different orientations and times.
-
-### `GLOB_estimations_Faiman_LYR.py`
-This script calculates beam and diffuse irradiance using the Faiman et al. (1992) method. It processes GLOB and K&Z data, estimates irradiance components, and generates plots.
-
-### `GLOB_estimations_Faiman_NYA.py`
-This script calculates beam and diffuse irradiance using the Faiman et al. (1992) method. It processes GLOB and K&Z data, estimates irradiance components, and generates plots.
+Generates polar heatmaps to visualize average solar irradiance for multiple orientations. Processes monthly and daily data, calculates average irradiance, and saves heatmaps as PNG files.
 
 ### `glob_functions_Faiman.py`
-This script contains functions for calculating solar angles, irradiance components, and geometry coefficients. It uses the Faiman et al. (1992) method for beam and diffuse irradiance estimation.
+Provides functions for calculating solar angles, irradiance components, and geometry coefficients using the Faiman et al. (1992) method. Includes parallel processing for efficient computation.
 
 ## Installation
 
