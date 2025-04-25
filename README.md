@@ -57,23 +57,22 @@ The following table describes the variable names in the data files together with
 
 ## Scripts
 
-### `CALC_irradiance_multiorient.py`
-Calculates solar irradiance for multiple orientations using Faiman et al. (1992) method. Loads data from CSV files, computes angles, filters negative values, and saves results to CSV.
+Sorted by order of execution.
 
-### `GLOB_estimations_Faiman_LYR.py` and `GLOB_estimations_Faiman_NYA.py`
-Calculates beam and diffuse irradiance for GLOB data in Longyearbyen/Ny-Ålesund using Faiman et al. (1992) method. Processes NetCDF data, generates plots, and compares results with reference data.
+### `PROCESS_GLOB_csvdata.py`
+Processes raw GLOB data from CSV files (data not provided), standardizes naming conventions, converts timestamps to UTC, and writes processed data to new CSV files called "GLOB_data_30sec_*.dat".
 
 ### `CREATE_ncdf_GLOB_data_LYR.py` and `CREATE_ncdf_GLOB_data_NYA.py`
-Processes GLOB data from CSV files, calculates solar angles, computes surface albedo, and converts data to NetCDF format with metadata.
+Processes GLOB data from CSV files (see "\Data_GLOB\GLOB_data_30sec_*.dat"), calculates solar angles, computes surface albedo, and converts data to NetCDF format with metadata called "GLOB_data_5min_*.nc".
+
+### `GLOB_estimations_Faiman_LYR.py` and `GLOB_estimations_Faiman_NYA.py`
+Calculates beam and diffuse irradiance for GLOB data in Longyearbyen/Ny-Ålesund using Faiman et al. (1992) method. Processes NetCDF data (see "\Data_GLOB\GLOB_data_5min_*.nc") and save the output in CSV files, generates plots, and compares results with reference data.
+
+### `CALC_irradiance_multiorient.py`
+Calculates solar irradiance for multiple orientations using Faiman et al. (1992) method. Loads data from CSV files generated with `GLOB_estimations_Faiman_*.py` in a folder called "\MultiOrientations_Irradiance_Data_LYR", computes angles, filters negative values, and saves results to CSV.
 
 ### `PLOT_irradiance_multiorient_polar_plot.py`
 Generates visualizations, including polar heatmaps and time series plots, to analyze irradiance components from GLOB data.
-
-### `PROCESS_GLOB_csvdata.py`
-Processes raw GLOB data from CSV files, standardizes naming conventions, converts timestamps to UTC, and writes processed data to new CSV files.
-
-### `GLOB_Polar_Heatmap.py`
-Generates polar heatmaps to visualize average solar irradiance for multiple orientations. Processes monthly and daily data, calculates average irradiance, and saves heatmaps as PNG files.
 
 ### `glob_functions_Faiman.py`
 Provides functions for calculating solar angles, irradiance components, and geometry coefficients using the Faiman et al. (1992) method. Includes parallel processing for efficient computation.
@@ -96,8 +95,10 @@ To set up the project locally, follow these steps:
 ## Usage
 
 0/ `PROCESS_GLOB_csvdata.py`, `CREATE_ncdf_GLOB_data_LYR.py` and `CREATE_ncdf_GLOB_data_NYA.py` serve for producing the netCDF data file "GLOB_data_5min_*.nc". You can download this file on GIT so you won't need to use these files.
+
 1/ You need to produce the daily data from `GLOB_estimations_Faiman_LYR.py` or `GLOB_estimations_Faiman_NYA.py` with the data "GLOB_data_5min_*.nc". This can take a bit of time if one want to generate data over the whole year. It takes ca. 1h to generate data for a month.
-2/ Use the newly produced data in `CALC_irradiance_multiorient.py` then `PLOT_irradiance_multiorient_polar_plot.py`or `GLOB_Polar_Heatmap.py`
+
+2/ Use the newly produced data in `CALC_irradiance_multiorient.py` then `PLOT_irradiance_multiorient_polar_plot.py`.
 
 /!\ Don't forget to change the datapath in the scripts. 
 
