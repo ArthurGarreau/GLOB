@@ -69,13 +69,13 @@ def incident_and_zenith_angle(timestamps, plane_inclination, plane_azimuth, lati
         + np.cos(delta) * np.sin(beta) * np.sin(omega) * np.sin(gamma)
     )
     
-    theta_z = solar_angles['apparent_zenith'].values
+    theta_z = solar_angles['zenith'].values
     
     return np.degrees(theta_i.values), theta_z
 
-def C_b(timestamps, plane_inclination, plane_azimuth, latitude, longitude, albedo):
+def Coef_b(timestamps, plane_inclination, plane_azimuth, latitude, longitude, albedo):
     """
-    Calculate the geometry coefficient for beam irradiance (C_b).
+    Calculate the geometry coefficient for beam irradiance (Coef_b).
 
     Parameters:
         timestamps (pd.DatetimeIndex): Timestamps for calculation.
@@ -97,14 +97,14 @@ def C_b(timestamps, plane_inclination, plane_azimuth, latitude, longitude, albed
     # theta_zenith[theta_zenith < 0 ] = np.nan; theta_i[theta_i < 0 ] = np.nan; 
     
     # Calculate the sum of incidence and zenith angles
-    C_b_value = np.cos(theta_i) + albedo * np.cos(theta_zenith)* 0.5 * (1 - np.cos(np.radians(beta)))
+    Coef_b_value = np.cos(theta_i) + albedo * np.cos(theta_zenith)* 0.5 * (1 - np.cos(np.radians(beta)))
     
-    return C_b_value.iloc[0]
+    return Coef_b_value.iloc[0]
 
 
-def C_d(plane_inclination, albedo):
+def Coef_d(plane_inclination, albedo):
     """
-    Calculate the geometry coefficient for diffuse irradiance (C_d).
+    Calculate the geometry coefficient for diffuse irradiance (Coef_d).
 
     Parameters:
         plane_inclination (float): Inclination angle of the plane (degrees).
@@ -114,8 +114,8 @@ def C_d(plane_inclination, albedo):
         float: Geometry coefficient for diffuse irradiance.
     """
     beta = np.radians(plane_inclination)
-    C_d_value = 0.5 * (1 + np.cos(beta)) + albedo * 0.5 * (1 - np.cos(beta))
-    return C_d_value.iloc[0] 
+    Coef_d_value = 0.5 * (1 + np.cos(beta)) + albedo * 0.5 * (1 - np.cos(beta))
+    return Coef_d_value.iloc[0] 
 
 
 def estimation_diffuse_beam(variables, glob_value, zenith_angle, lat, lon):
@@ -143,11 +143,11 @@ def estimation_diffuse_beam(variables, glob_value, zenith_angle, lat, lon):
     vars_glob = table_azim_incli.index
 
     R_j = glob_value[vars_glob].values
-    b_j = np.array( [C_b(timestamp, 
+    b_j = np.array( [Coef_b(timestamp, 
                        table_azim_incli['inclination'].iloc[i], 
                        table_azim_incli['azimuth'].iloc[i], lat, lon, albedo) 
                    for i in range(len(table_azim_incli))] )
-    d_j = np.array( [C_d(table_azim_incli['inclination'].iloc[i], albedo) 
+    d_j = np.array( [Coef_d(table_azim_incli['inclination'].iloc[i], albedo) 
                     for i in range(len(table_azim_incli))] )
     
     
@@ -188,9 +188,9 @@ def estimation_diffuse_beam(variables, glob_value, zenith_angle, lat, lon):
     # D_ref = R_ghi - cos_z * I_ref
         
     # Calculate the error in comparison to Erbs model
-    error = (I_ref - I)**2 + (D_ref - D)**2
+    error = ((I_ref - I)**2 + (D_ref - D)**2)**0.5
     
-    return D, I, error.values[0] 
+    return D, I, D_prime, I_prime, error.values[0] 
 
 
 
@@ -282,20 +282,22 @@ def find_best_combination(combs, glob_value, zenith_angle, lat, lon):
     ) for comb in combs)
 
     # Filter results to only include valid entries (D > 0 and I > 0)
-    valid_results = [(D, I, error, comb) 
-        for (D, I, error), comb in zip(results, combs) 
-        if D > 0 and I > 0]
+    valid_results = [(D, I, D_prime, I_prime, error, comb) 
+        for (D, I, D_prime, I_prime, error), comb in zip(results, combs) 
+        if D > 0 and I > 0 and D_prime > 0 and I_prime > 0]
+    
     # If no valid results, return NaNs
     if not valid_results:
         # print("No valid combinations found (D > 0 and I > 0).")
-        return np.nan, np.nan, [np.nan, np.nan]
+        return np.nan, np.nan, np.nan, np.nan, np.nan, [np.nan, np.nan]
 
     # Extract errors from valid results
-    errors = [result[2] for result in valid_results]
+    errors = [result[4] for result in valid_results]
+    
     # Find the index of the minimum error among valid results
     best_index = np.nanargmin(errors)
-
+    
     # Get the best result
-    D, I, error, comb_opt = valid_results[best_index]
+    D, I, D_prime, I_prime, error, comb_opt = valid_results[best_index]
 
-    return D, I, list(comb_opt)
+    return D, I, D_prime, I_prime, error, list(comb_opt)
