@@ -1,45 +1,55 @@
 # -*- coding: utf-8 -*-
 """
-GLOB Data Visualization Script
-==============================
+Polar Heatmap Generation Script for Solar Irradiance Data
+=========================================================
 
-This script processes GLOB data and generates visualizations, including polar heatmaps and time series plots,
-to analyze irradiance components for different orientations and time periods.
+This script generates polar heatmaps to visualize the average solar irradiance for multiple orientations.
+It processes both monthly and daily data, calculating the average irradiance for specified tilt and azimuth angles,
+and saves the resulting heatmaps as images.
 
 Key Features:
 -------------
-- Loads GLOB data from a NetCDF file.
-- Filters data based on specified date and time ranges.
-- Generates polar heatmaps to visualize mean irradiance values for various azimuth and inclination angles.
-- Plots time series data for specific dates to compare different irradiance components.
+- Loads solar irradiance data from CSV files.
+- Filters data based on specified time ranges.
+- Calculates the average irradiance for each combination of tilt and azimuth angles.
+- Generates polar heatmaps using Matplotlib.
+- Saves the heatmaps as PNG files with detailed titles and labels.
 
 Dependencies:
 -------------
-- xarray
-- pandas
-- numpy
 - matplotlib
+- numpy
+- pandas
 - pathlib
-- sys
-- itertools
+- datetime
+- os
 
 Author: Arthur Garreau
-Date: March 28, 2025
+Date: April 25, 2025
 """
+
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import calendar
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
+
+############################## File Paths #####################################
+
+data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB")
+data_daily_dir_path = data_path / "MultiOrientations_Irradiance_Data_LYR"
+save_fig_monthly_path = Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\Fig\Polar_Heatmap_LYR\Monthly")
+save_fig_daily_path = Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\Fig\Polar_Heatmap_LYR\Daily")
+
+###############################################################################
 
 
 # %% Polar Heat Map - Monthly average
 
 ### Define the base directory and date range
-base_dir = r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB\MultiOrientations_Irradiance_Data_LYR"
 for month in range(4,10):
     year = 2024
     # month = 7  # For example, October
@@ -65,7 +75,7 @@ for month in range(4,10):
     
     for date in date_range:
         file_date_str = date.strftime("%Y-%m-%d")
-        file_path = os.path.join(base_dir, f"irradiance_results_{file_date_str}.csv")
+        file_path = data_daily_dir_path / f"irradiance_results_{file_date_str}.csv"
         
         if not os.path.exists(file_path):
             print(f"File not found: {file_path}")
@@ -130,19 +140,14 @@ for month in range(4,10):
     ### Save and show
     plt.show()
     
-    save_path = Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\Fig\Polar_Heatmap_LYR\Monthly")
-    save_path.mkdir(parents=True, exist_ok=True)
-    fig.savefig(save_path / f"monthly_avg_polar_heatmap_{month}-2024.png", dpi=300, bbox_inches='tight')
+    save_fig_monthly_path.mkdir(parents=True, exist_ok=True)
+    fig.savefig(save_fig_monthly_path / f"monthly_avg_polar_heatmap_{month}-2024.png", dpi=300, bbox_inches='tight')
     plt.close()
     
 
 
 
-
 # %% Polar Heat Map - Daily average
-
-# Define the base directory
-base_dir = r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB\Multiorientations_irradiance_data_LYR"
 
 # Define the date range for April
 start_date = datetime(2024, 4, 14)
@@ -163,7 +168,7 @@ inclination_angles = np.arange(0, 91, 10)
 # Loop through each day in April
 for date in date_range:
     file_date_str = date.strftime("%Y-%m-%d")
-    file_path = os.path.join(base_dir, f"irradiance_results_{file_date_str}.csv")
+    file_path =data_daily_dir_path / f"irradiance_results_{file_date_str}.csv"
 
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
@@ -219,9 +224,8 @@ for date in date_range:
         plt.show()
         
         # Save the plot
-        save_path = Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\Fig\Polar_Heatmap_LYR\Daily")
-        save_path.mkdir(parents=True, exist_ok=True)
-        fig.savefig(save_path / f"daily_avg_polar_heatmap_{file_date_str}.png", dpi=300, bbox_inches='tight')
+        save_fig_daily_path.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_fig_daily_path / f"daily_avg_polar_heatmap_{file_date_str}.png", dpi=300, bbox_inches='tight')
         plt.close()
 
     except Exception as e:

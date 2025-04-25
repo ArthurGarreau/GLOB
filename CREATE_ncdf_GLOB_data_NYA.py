@@ -4,14 +4,14 @@ GLOB Data Processing and NetCDF Conversion Script
 =================================================
 
 This script processes GLOB data from a CSV file, calculates solar angles, computes surface albedo,
-and converts the data into a NetCDF file format. It includes functionalities for reading and preprocessing
-data, calculating solar angles using pvlib, and adding metadata to the NetCDF file.
+resamples the data to 5-minute intervals, and converts the data into a NetCDF file format.
 
 Key Features:
 -------------
 - Reads and preprocesses GLOB data from a CSV file.
 - Calculates solar angles (zenith, elevation, azimuth, hour angle, declination) using pvlib.
 - Computes surface albedo and filters valid values.
+- Resamples the data to 5-minute intervals.
 - Adds latitude and longitude information to the NetCDF file.
 - Saves the processed data as a NetCDF file with appropriate metadata.
 
@@ -34,6 +34,11 @@ import numpy as np
 import pvlib
 from pathlib import Path
 
+############################## File Paths #####################################
+
+data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB")
+
+###############################################################################
 
 # ---- Function Definitions ---- #
 
@@ -56,27 +61,22 @@ def calculate_solar_angles(timestamps, latitude, longitude, altitude=6, temperat
     }
     return angles
 
-
 def read_and_preprocess_data(file_path):
     """
     Read and preprocess GLOB data from CSV.
     """
     df = pd.read_csv(file_path, skiprows=3)
     df.replace(-9999, np.nan, inplace=True)
-    
+
     # Convert 'Timestamp' column to datetime and set it as index
     df['Timestamp'] = pd.to_datetime(df['Timestamp'].values, unit='ns')
     df.set_index('Timestamp', inplace=True)
-    
+
     return df
 
 
-# ---- File Paths ---- #
-
-data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB")
-file_2025 = data_path / "GLOB_data_30sec_2025_NYA.dat"
-
 # ---- Data Preparation ---- #
+file_2025 = data_path / "GLOB_data_30sec_2025_NYA.dat"
 
 # Read and combine data
 df_2025 = read_and_preprocess_data(file_2025)
@@ -84,18 +84,22 @@ df_2025 = read_and_preprocess_data(file_2025)
 combined_df = df_2025
 combined_df.index = pd.to_datetime(combined_df.index)
 
-# Convert DataFrames to Xarray Datasets
-ds = xr.Dataset.from_dataframe(combined_df)
+# Resample to 5-minute intervals and compute the mean
+resampled_df = combined_df.resample('5T').mean()
+
+# Convert DataFrame to Xarray Dataset
+ds = xr.Dataset.from_dataframe(resampled_df)
 
 timestamps_ds = pd.to_datetime(ds['Timestamp']).astype('datetime64[ns]')
 timestamps_ds = timestamps_ds.tz_localize('UTC')
 
 # Add metadata to the Timestamp variable
-ds['Timestamp'] = timestamps_ds.values # Important to add the .values to have the format YYYY-MM-DD hh:mm:ss
+ds['Timestamp'] = timestamps_ds.values  # Important to add the .values to have the format YYYY-MM-DD hh:mm:ss
 ds['Timestamp'].attrs.update({
     'calendar': 'gregorian',
     'long_name': 'UTC time',
-    'standard_name': 'time'})
+    'standard_name': 'time'
+})
 
 ds = ds.drop_duplicates(dim='Timestamp')
 timestamps_ds = timestamps_ds.drop_duplicates()
@@ -103,7 +107,6 @@ timestamps_ds = timestamps_ds.drop_duplicates()
 # Compute albedo and filter valid values (0 <= albedo <= 1)
 albedo = ds['GHI_ground'] / ds['GHI']
 albedo = albedo.where((albedo >= 0) & (albedo <= 1))
-
 
 # Add albedo to the original dataset
 ds['albedo'] = (('Timestamp'), albedo.values)
@@ -130,10 +133,9 @@ for var, values in solar_angles.items():
         'standard_name': var
     })
 
-
 # ---- Add Latitude and Longitude to NetCDF ---- #
 
-# Add latitude and longitude to the 30-second dataset (ds)
+# Add latitude and longitude to the 5-minute dataset (ds)
 ds['latitude'] = ((), latitude)
 ds['longitude'] = ((), longitude)
 
@@ -148,10 +150,9 @@ ds['longitude'].attrs.update({
     'standard_name': 'longitude'
 })
 
-
 # ---- Save to NetCDF ---- #
 
-output_file_30sec = data_path / "GLOB_data_30sec_2025.nc"
+output_file_5min = data_path / "GLOB_data_5min_2025_NYA.nc"
 
 # Remove conflicting attributes from 'Timestamp' before saving
 for attr in ['calendar', 'units']:
@@ -159,10 +160,10 @@ for attr in ['calendar', 'units']:
         del ds['Timestamp'].attrs[attr]
 
 # Save datasets
-ds.to_netcdf(output_file_30sec)
+ds.to_netcdf(output_file_5min)
 
-print(f"30-second NetCDF file created at: {output_file_30sec}")
+print(f"5-minute NetCDF file created at: {output_file_5min}")
 
+# Print variables in the dataset
 for d in ds.variables:
     print(d)
-

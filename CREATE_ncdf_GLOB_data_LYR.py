@@ -27,12 +27,18 @@ Author: Arthur Garreau
 Contact: arthurg@unis.no
 Date: November 1, 2024
 """
-
+# %% Init
 import pandas as pd
 import xarray as xr
 import numpy as np
 import pvlib
 from pathlib import Path
+
+############################## File Paths #####################################
+
+data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB")
+
+###############################################################################
 
 
 # ---- Function Definitions ---- #
@@ -73,91 +79,10 @@ def read_and_preprocess_data(file_path):
 
 # ---- File Paths ---- #
 
-data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB")
 file_2023 = data_path / "GLOB_data_30sec_2023.dat"
 file_2024 = data_path / "GLOB_data_30sec_2024.dat"
 
 file_KZ = data_path.parent / "Irradiance_ncdf" / "Adventdalen_global_horizontal_irradiances_LW_SW_all.nc"
-
-# %% ---- Create 30-sec dataset ---- #
-
-# Read and combine data
-df_2023 = read_and_preprocess_data(file_2023)
-df_2024 = read_and_preprocess_data(file_2024)
-
-combined_df = pd.concat([df_2023, df_2024])
-
-# Convert DataFrames to Xarray Datasets
-ds = xr.Dataset.from_dataframe(combined_df)
-
-timestamps_ds = pd.to_datetime(ds['Timestamp']).astype('datetime64[ns]')
-timestamps_ds = timestamps_ds.tz_localize('UTC')
-
-# Add metadata to the Timestamp variable for both datasets
-
-ds['Timestamp'] = timestamps_ds.values # Important to add the .values to have the format YYYY-MM-DD hh:mm:ss
-ds['Timestamp'].attrs.update({
-    'calendar': 'gregorian',
-    'long_name': 'UTC time',
-    'standard_name': 'time'
-})
-
-ds = ds.drop_duplicates(dim='Timestamp')
-timestamps_ds = timestamps_ds.drop_duplicates()
-
-
-# ---- Solar Angles Calculation ---- #
-
-# Define location coordinates
-latitude = 78.200318
-longitude = 15.840308
-
-solar_angles = calculate_solar_angles(timestamps_ds, latitude, longitude)
-
-# Add solar angles to the dataset
-for var, values in solar_angles.items():
-    ds[var] = (('Timestamp'), values)
-    ds[var].attrs.update({
-        'units': 'degrees',
-        'long_name': f'Solar {var.replace("_", " ")}',
-        'standard_name': var
-    })
-
-# ---- Add Latitude and Longitude to NetCDF ---- #
-
-# Add latitude and longitude to the 30-second dataset (ds)
-ds['latitude'] = ((), latitude)
-ds['longitude'] = ((), longitude)
-
-ds['latitude'].attrs.update({
-    'units': 'degrees',
-    'long_name': 'Latitude of the location in Ny-Alesund',
-    'standard_name': 'latitude'
-})
-ds['longitude'].attrs.update({
-    'units': 'degrees',
-    'long_name': 'Longitude of the location in Ny-Alesund',
-    'standard_name': 'longitude'
-})
-
-# ---- Save to NetCDF ---- #
-
-output_file_30sec = data_path / "GLOB_data_30sec_2023-24.nc"
-
-# Remove conflicting attributes from 'Timestamp' before saving
-for attr in ['calendar', 'units']:
-    if attr in ds['Timestamp'].attrs:
-        del ds['Timestamp'].attrs[attr]
-
-
-# Save datasets
-ds.to_netcdf(output_file_30sec)
-
-print(f"30-second NetCDF file created at: {output_file_30sec}")
-
-
-for d in ds.variables:
-    print(d)
 
 # %% ---- Create 5-min dataset ---- #
 
@@ -254,5 +179,87 @@ ds_5min.to_netcdf(output_file_5min)
 print(f"5-minute NetCDF file created at: {output_file_5min}")
 
 for d in ds_5min.variables:
+    print(d)
+
+
+
+# %% ---- Create 30-sec dataset ---- #
+
+# Read and combine data
+df_2023 = read_and_preprocess_data(file_2023)
+df_2024 = read_and_preprocess_data(file_2024)
+
+combined_df = pd.concat([df_2023, df_2024])
+
+# Convert DataFrames to Xarray Datasets
+ds = xr.Dataset.from_dataframe(combined_df)
+
+timestamps_ds = pd.to_datetime(ds['Timestamp']).astype('datetime64[ns]')
+timestamps_ds = timestamps_ds.tz_localize('UTC')
+
+# Add metadata to the Timestamp variable for both datasets
+
+ds['Timestamp'] = timestamps_ds.values # Important to add the .values to have the format YYYY-MM-DD hh:mm:ss
+ds['Timestamp'].attrs.update({
+    'calendar': 'gregorian',
+    'long_name': 'UTC time',
+    'standard_name': 'time'
+})
+
+ds = ds.drop_duplicates(dim='Timestamp')
+timestamps_ds = timestamps_ds.drop_duplicates()
+
+
+# ---- Solar Angles Calculation ---- #
+
+# Define location coordinates
+latitude = 78.200318
+longitude = 15.840308
+
+solar_angles = calculate_solar_angles(timestamps_ds, latitude, longitude)
+
+# Add solar angles to the dataset
+for var, values in solar_angles.items():
+    ds[var] = (('Timestamp'), values)
+    ds[var].attrs.update({
+        'units': 'degrees',
+        'long_name': f'Solar {var.replace("_", " ")}',
+        'standard_name': var
+    })
+
+# ---- Add Latitude and Longitude to NetCDF ---- #
+
+# Add latitude and longitude to the 30-second dataset (ds)
+ds['latitude'] = ((), latitude)
+ds['longitude'] = ((), longitude)
+
+ds['latitude'].attrs.update({
+    'units': 'degrees',
+    'long_name': 'Latitude of the location in Ny-Alesund',
+    'standard_name': 'latitude'
+})
+ds['longitude'].attrs.update({
+    'units': 'degrees',
+    'long_name': 'Longitude of the location in Ny-Alesund',
+    'standard_name': 'longitude'
+})
+
+# ---- Save to NetCDF ---- #
+
+output_file_30sec = data_path / "GLOB_data_30sec_2023-24.nc"
+
+# Remove conflicting attributes from 'Timestamp' before saving
+for attr in ['calendar', 'units']:
+    if attr in ds['Timestamp'].attrs:
+        del ds['Timestamp'].attrs[attr]
+
+
+# Save datasets
+ds.to_netcdf(output_file_30sec)
+
+print(f"30-second NetCDF file created at: {output_file_30sec}")
+
+
+for d in ds.variables:
     print(d)
 

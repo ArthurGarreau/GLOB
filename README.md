@@ -54,7 +54,6 @@ The following table describes the variable names in the data files together with
 | SIR45SE  | SIR_Avg[25]  | 135     | 135  |                         |
 | REF      | Kglob        | 0       | 180  | reflected GHI           |
 
-## Scripts
 
 ## Scripts
 
@@ -96,16 +95,12 @@ To set up the project locally, follow these steps:
 
 ## Usage
 
-To run the scripts, use the following commands:
+0/ `PROCESS_GLOB_csvdata.py`, `CREATE_ncdf_GLOB_data_LYR.py` and `CREATE_ncdf_GLOB_data_NYA.py` serve for producing the netCDF data file "GLOB_data_5min_*.nc". You can download this file on GIT so you won't need to use these files.
+1/ You need to produce the daily data from `GLOB_estimations_Faiman_LYR.py` or `GLOB_estimations_Faiman_NYA.py` with the data "GLOB_data_5min_*.nc". This can take a bit of time if one want to generate data over the whole year. It takes ca. 1h to generate data for a month.
+2/ Use the newly produced data in `CALC_irradiance_multiorient.py` then `PLOT_irradiance_multiorient_polar_plot.py`or `GLOB_Polar_Heatmap.py`
 
-```bash
-python CALC_irradiance_multiorient.py
-python PLOT_irradiance_multiorient_polar_plot.py
-python Data_analysis_GLOB.py
-python GLOB_Polar_Heatmap.py
-python GLOB_estimations_Faiman_LYR.py
-python GLOB_estimations_Faiman_NYA.py
-```
+/!\ Don't forget to change the datapath in the scripts. 
+
 
 ## License
 

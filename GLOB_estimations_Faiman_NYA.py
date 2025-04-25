@@ -42,11 +42,14 @@ import sys
 from itertools import combinations
 from datetime import datetime
 
-# Add custom script path
+############################## File Paths #####################################
+# Add script path for the importing the functions in glob_functions_Faiman.py
 sys.path.append(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\GLOB_scripts")
 
-# % Load Data
 data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data")
+output_file_path = data_path / "GLOB" / "B_and_D_Estimations_LYR" 
+
+###############################################################################
 
 # Load GLOB data
 ds_glob = xr.open_dataset(data_path / r"GLOB\GLOB_data_30sec_2025_NYA.nc")
@@ -131,7 +134,7 @@ for date in dates:
     
     # Convert results to a DataFrame
     results_df = pd.DataFrame(results)
-    output_file = data_path / "GLOB" / "B_and_D_Estimations_NYA" / f"best_estimations_{date}_{Criteria}.csv"
+    output_file = output_file_path / f"best_estimations_{date}_{Criteria}.csv"
     
     # Write the header and units to the file
     # Get the current date
@@ -163,7 +166,7 @@ import matplotlib.dates as mdates
 for date in dates:
         
     date=date.strftime('%Y-%m-%d')
-    results_df = pd.read_csv(data_path / "GLOB" / "B_and_D_Estimations_NYA" / f"Faiman_{date}_criteria{Criteria}.csv")  # Adjust path as needed
+    results_df = pd.read_csv(output_file_path / f"Faiman_{date}_criteria{Criteria}.csv")  # Adjust path as needed
     results_df['Timestamp'] = pd.to_datetime(results_df['Timestamp'])
     timestamps = results_df['Timestamp']
     
