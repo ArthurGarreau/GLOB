@@ -30,28 +30,25 @@ Date: April 25, 2025
 
 # %% Load Libraries
 import xarray as xr
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
-import sys
-from itertools import combinations
 
-# Add custom script path
-sys.path.append(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\GLOB_scripts")
+
+############################## File Paths #####################################
+
+data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB")
+output_file_path = data_path / "B_and_D_Estimations_LYR" 
+save_fig_path = Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\Fig")
+
+###############################################################################
 
 # Load GLOB Data
-data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data")
-ds_glob = xr.open_dataset(data_path / r"GLOB\GLOB_data_5min_2023-24.nc")
+ds_glob = xr.open_dataset(data_path / "GLOB_data_5min_2023-24.nc")
 
 # %% Plot 
-import matplotlib.pyplot as plt
-import numpy as np
-import xarray as xr
-from pathlib import Path
 
 # Assuming ds_glob is your xarray Dataset
-# ds_glob = xr.open_dataset('your_dataset.nc')  # Uncomment and adjust if loading from a file
 
 # Define the azimuth orientations and their corresponding angles in degrees
 azimuth_orientations = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N']
@@ -125,9 +122,8 @@ ax.tick_params(axis='both', colors='black')
 ax.set_title(f'GLOB Polar Heatmap - {period} {year} - {start_time}:00-{end_time}:00 UTC', fontsize=12)
 
 # Save the plot
-save_path = Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\Fig")
-save_path.mkdir(parents=True, exist_ok=True)
-fig.savefig(save_path / f"polar_heatmap_{period}_2023_{start_time}-{end_time}UTC.png", dpi=300, bbox_inches='tight')
+save_fig_path.mkdir(parents=True, exist_ok=True)
+fig.savefig(save_fig_path / f"polar_heatmap_{period}_2023_{start_time}-{end_time}UTC.png", dpi=300, bbox_inches='tight')
 
 # Show the plot
 plt.show()
@@ -170,6 +166,5 @@ plt.grid(True)
 
 # Show the plot
 plt.show()
-
 
 

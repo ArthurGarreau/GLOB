@@ -21,25 +21,34 @@ Key Features:
 Dependencies:
 -------------
 - pandas
-- numpy
-- csv
-- os
+- pathlib
 
 Author: Arthur Garreau
 Contact: arthurg@unis.no
 Date: November 1, 2024
 """
 
-# %% Data 30 seconds 2023
+
 
 import pandas as pd
-import numpy as np
-import csv
-import os
-# Load the data into a DataFrame
-input_file  = "C:/Users/arthurg/OneDrive - Universitetssenteret på Svalbard AS/Documents/UNIS_PhD/PROJECTS/GLOB/DATA_2023/CR1000X GLOB_Sec.dat" 
-output_file = "C:/Users/arthurg/OneDrive - NTNU/Workspace/Data/GLOB/GLOB_data_30sec_2023_LYR.dat"
+from pathlib import Path
 
+
+############################## File Paths #####################################
+
+RAW_DATA = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB\Raw_Data")
+input_file_data_path_2023 = RAW_DATA / "DATA_2023"
+input_file_data_path_2024 = RAW_DATA / "DATA_2024"
+input_file_data_path_2025 = RAW_DATA / "DATA_2025"
+
+output_file_data_path = RAW_DATA.parent
+###############################################################################
+
+
+# %% Data 30 seconds 2023
+# Load the data into a DataFrame
+input_file  = input_file_data_path_2023 / "CR1000X GLOB_Sec.dat" 
+output_file = output_file_data_path / "GLOB_data_30sec_2023_LYR.dat"
 
 # Load the data, skipping the header rows for processing
 df = pd.read_csv(input_file, skiprows=[0,2,3])
@@ -135,8 +144,9 @@ df= pd.read_csv(output_file)
 import pandas as pd
 
 # Load the data into a DataFrame
-input_file  = "C:/Users/arthurg/OneDrive - NTNU/Workspace/Data/GLOB/Raw_Data/CR1000X_GLOB_online_GLOB_30Sec.dat" 
-output_file = "C:/Users/arthurg/OneDrive - NTNU/Workspace/Data/GLOB/GLOB_data_30sec_2024_LYR.dat"
+input_file  = input_file_data_path_2024 / "CR1000X GLOB_Sec.dat" 
+output_file = output_file_data_path / "GLOB_data_30sec_2024_LYR.dat"
+
 
 # Load the data, skipping the header rows for processing
 df = pd.read_csv(input_file, skiprows=[0,2,3], low_memory=False)
@@ -222,8 +232,9 @@ df= pd.read_csv(output_file, low_memory=False)
 import pandas as pd
 
 # Load the data into a DataFrame
-input_file  = "C:/Users/arthurg/OneDrive - NTNU/Workspace/Data/GLOB/Raw_Data/CR1000X_GLOB_online_GLOB_30Sec.dat" 
-output_file = "C:/Users/arthurg/OneDrive - NTNU/Workspace/Data/GLOB/GLOB_data_30sec_2025_NYA.dat"
+input_file  = input_file_data_path_2025 / "CR1000X_GLOB_online_GLOB_30Sec.dat" 
+output_file = output_file_data_path / "GLOB_data_30sec_2025_NYA.dat"
+
 
 # Load the data, skipping the header rows for processing
 df = pd.read_csv(input_file, skiprows=[0,2,3], low_memory=False)
