@@ -1,13 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Nov 6 14:33:44 2024
+Solar Angle and Irradiance Calculation Functions
+================================================
 
-@author: arthurg
+This script provides a collection of functions for calculating solar angles, irradiance components,
+and geometry coefficients using the Faiman et al. (1992) method. It includes functionalities for
+estimating beam and diffuse irradiance, creating variable tables, and solving for irradiance components.
+
+Key Features:
+-------------
+- Calculates solar angles (zenith, azimuth, declination, etc.) using pvlib.
+- Computes the angle of incidence and zenith angle for a given plane.
+- Estimates beam and diffuse irradiance components using the Faiman method.
+- Provides geometry coefficients for beam and diffuse irradiance.
+- Utilizes parallel processing for efficient computation of irradiance estimations.
+
+Dependencies:
+-------------
+- numpy
+- pvlib
+- pandas
+- joblib
+
+Author: Arthur Garreau
 Contact: arthurg@unis.no
-
-Description:
-This script contains functions for calculating solar angles, irradiance components, and geometry coefficients.
-It uses the Faiman et al. (1992) method for beam and diffuse irradiance estimation.
+Date: November 6, 2024
 """
 
 import numpy as np

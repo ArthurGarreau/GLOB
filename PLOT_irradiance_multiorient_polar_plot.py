@@ -1,8 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr 24 15:12:48 2025
+GLOB Data Visualization Script
+==============================
 
-@author: arthurg
+This script processes GLOB data and generates visualizations, including polar heatmaps and time series plots,
+to analyze irradiance components for different orientations and time periods.
+
+Key Features:
+-------------
+- Loads GLOB data from a NetCDF file.
+- Filters data based on specified date and time ranges.
+- Generates polar heatmaps to visualize mean irradiance values for various azimuth and inclination angles.
+- Plots time series data for specific dates to compare different irradiance components.
+
+Dependencies:
+-------------
+- xarray
+- pandas
+- numpy
+- matplotlib
+- pathlib
+- sys
+- itertools
+
+Author: Arthur Garreau
+Date: March 28, 2025
 """
 
 import matplotlib.pyplot as plt

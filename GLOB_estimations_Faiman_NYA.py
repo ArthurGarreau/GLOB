@@ -1,13 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Nov 22 14:35:35 2024
+Beam and Diffuse Irradiance Calculation for GLOB in Ny-Ålesund
+==============================================================
 
-@author: arthurg
+This script calculates beam and diffuse irradiance using the Faiman et al. (1992) method for GLOB data in Ny-Ålesund.
+It processes GLOB data (GLOB_data_30sec_2025_NYA.nc), estimates irradiance components, generates plots, and compares the results with reference data.
+
+Key Features:
+-------------
+- Loads GLOB data from a NetCDF file.
+- Calculates solar angles and irradiance components using custom functions.
+- Estimates beam and diffuse irradiance for each timestamp.
+- Generates plots for beam, diffuse, and global irradiance.
+- Compares reconstructed global irradiance with reference data using regression analysis.
+
+Dependencies:
+-------------
+- xarray
+- pandas
+- numpy
+- matplotlib
+- pathlib
+- sys
+- itertools
+- datetime
+- sklearn
+- Custom module: glob_functions_Faiman
+
+Author: Arthur Garreau
 Contact: arthurg@unis.no
-
-Description:
-This script calculates beam and diffuse irradiance using the Faiman et al. (1992) method.
-It processes GLOB and K&Z data, estimates irradiance components, and generates plots.
+Date: November 22, 2024
 """
 
 # %% Load Libraries
@@ -27,7 +49,7 @@ sys.path.append(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard 
 data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data")
 
 # Load GLOB data
-ds_glob = xr.open_dataset(data_path / r"GLOB\GLOB_data_30sec_2025.nc")
+ds_glob = xr.open_dataset(data_path / r"GLOB\GLOB_data_30sec_2025_NYA.nc")
 lat_glob = ds_glob.latitude.values
 lon_glob = ds_glob.longitude.values
 
