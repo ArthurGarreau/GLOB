@@ -1,8 +1,31 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar 28 11:55:40 2025
+Polar Heatmap Generation Script for Solar Irradiance Data
+=========================================================
 
-@author: arthurg
+This script generates polar heatmaps to visualize the average solar irradiance for multiple orientations.
+It processes both monthly and daily data, calculating the average irradiance for specified tilt and azimuth angles,
+and saves the resulting heatmaps as images.
+
+Key Features:
+-------------
+- Loads solar irradiance data from CSV files.
+- Filters data based on specified time ranges.
+- Calculates the average irradiance for each combination of tilt and azimuth angles.
+- Generates polar heatmaps using Matplotlib.
+- Saves the heatmaps as PNG files with detailed titles and labels.
+
+Dependencies:
+-------------
+- matplotlib
+- numpy
+- pandas
+- pathlib
+- datetime
+- os
+
+Author: Arthur Garreau
+Date: April 25, 2025
 """
 
 # %% Load Libraries

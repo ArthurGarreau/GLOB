@@ -1,8 +1,32 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr 24 10:57:24 2025
+Solar Irradiance Calculation Script
+===================================
 
-@author: arthurg
+This script calculates the solar irradiance (W m-2) on multiple orientations using Eq. 2.1 from Faiman et al. (1992).
+The calculations are performed for a specified range of tilt and azimuth angles over a given date range.
+
+Key Features:
+-------------
+- Loads daily solar data from CSV files.
+- Computes the incident and zenith angles for each combination of tilt and azimuth angles.
+- Calculates the irradiance using the beam and diffuse components of solar radiation.
+- Filters out negative irradiance values.
+- Saves the results to CSV files with a detailed header including metadata.
+
+Dependencies:
+-------------
+- numpy
+- pandas
+- matplotlib
+- pathlib
+- datetime
+- sys
+- os
+- Custom module: glob_functions_Faiman
+
+Author: Arthur Garreau
+Date: April 24, 2025
 """
 import numpy as np
 import pandas as pd
