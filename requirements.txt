@@ -1,0 +1,20 @@
+# requirements.txt
+# ================
+#
+# This file lists the Python packages required to run the GLOB data processing and visualization scripts.
+# To install the dependencies, run:
+#
+#     pip install -r requirements.txt
+#
+# Author: Arthur Garreau
+# Contact: arthurg@unis.no
+# Date: April 28, 2025
+
+pandas
+xarray
+numpy
+matplotlib
+pvlib
+joblib
+scikit-learn
+pathlib2  # Only needed if you are using Python < 3.4
