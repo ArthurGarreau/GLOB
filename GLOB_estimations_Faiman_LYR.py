@@ -149,7 +149,7 @@ for date in dates:
     date_production = f"Date of production: {current_date}\n"
     author = f"Produced by: {your_name}\n"
     header = "Best estimation of beam and diffuse irradiance with GLOB using the Faiman et al. (1992) method.\n\
-    Location: Adventdalen (78.200318N 15.840308E).\n"
+Location: Adventdalen (78.200318N 15.840308E).\n"
     units = "[UTC]\t\t[W m-2]\t [W m-2]\t  [W m-2]\t [W m-2]\t [/]\t [/]\t [°]\t [/]\n"
     
     # Open the file and write the header and units

@@ -10,6 +10,7 @@
 # Contact: arthurg@unis.no
 # Date: April 28, 2025
 
+spyder-kernels==3.0.*
 pandas
 xarray
 numpy
@@ -18,3 +19,5 @@ pvlib
 joblib
 scikit-learn
 pathlib2  # Only needed if you are using Python < 3.4
+netcdf4
+h5netcdf
