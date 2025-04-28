@@ -19,7 +19,7 @@ GLOB is a multiface solar irradiance instrument composed of 25 pyranometers (Apo
 - Measures solar irradiance from multiple orientations.
 - Includes scripts for data analysis, irradiance calculations, and visualization.
 - Utilizes the Faiman et al. (1992) method for beam and diffuse irradiance estimation.
-- Works with NetCDF data, which can be requested by contacting Arthur G.
+- Works with NetCDF data, which are available in the folder associated to this Git repository.
 
 ## Pyranometer Orientations
 
