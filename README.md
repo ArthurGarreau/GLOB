@@ -94,7 +94,7 @@ To set up the project locally, follow these steps:
 
 ## Usage
 
-0/ `PROCESS_GLOB_csvdata.py`, `CREATE_ncdf_GLOB_data_LYR.py` and `CREATE_ncdf_GLOB_data_NYA.py` serve for producing the netCDF data file "GLOB_data_5min_*.nc". You can download this file on GIT so you won't need to use these files.
+0/ `PROCESS_GLOB_csvdata.py`, `CREATE_ncdf_GLOB_data_LYR.py` and `CREATE_ncdf_GLOB_data_NYA.py` serve for producing the netCDF data file "GLOB_data_5min_*.nc". You can download these data files on the Git project so you won't need to use these files.
 
 1/ You need to produce the daily data from `GLOB_estimations_Faiman_LYR.py` or `GLOB_estimations_Faiman_NYA.py` with the data "GLOB_data_5min_*.nc". This can take a bit of time if one want to generate data over the whole year. It takes ca. 1h to generate data for a month.
 
