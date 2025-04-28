@@ -301,7 +301,7 @@ def find_best_combination(combs, glob_value, zenith_angle, lat, lon):
     # Filter results to only include valid entries (D > 0 and I > 0)
     valid_results = [(D, I, D_prime, I_prime, error, comb) 
         for (D, I, D_prime, I_prime, error), comb in zip(results, combs) 
-        if D > 0 and I > 0 and D_prime > 0 and I_prime > 0]
+        if D > 0 and I > 0 and D_prime > 0 and I_prime > 0 and zenith_angle < 90]
     
     # If no valid results, return NaNs
     if not valid_results:

@@ -47,7 +47,7 @@ from datetime import datetime
 sys.path.append(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\GLOB_scripts")
 
 data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data")
-output_file_path = data_path / "GLOB" / "B_and_D_Estimations_LYR" 
+output_file_path = data_path / "GLOB" / "B_and_D_Estimations_NYA" 
 
 ###############################################################################
 
@@ -66,7 +66,7 @@ month = 3  # For example, October
 year = 2025
 
 # Create a daily date range for the specified month and year
-start_date = f'{year}-{month:02d}-16'
+start_date = f'{year}-{month:02d}-1'
 end_date = f'{year}-{month:02d}-{pd.Period(start_date).days_in_month}'
 dates = pd.date_range(start=start_date, end=end_date, freq='D')
 
@@ -144,7 +144,7 @@ for date in dates:
     date_production = f"Date of production: {current_date}\n"
     author = f"Produced by: {your_name}\n"
     header = "Best estimation of beam and diffuse irradiance with GLOB using the Faiman et al. (1992) method.\n\
-    Location: Ny-Alesund (78.92240N 11.92174E).\n"
+Location: Ny-Alesund (78.92240N 11.92174E).\n"
     units = "[UTC]\t\t[W m-2]\t [W m-2]\t  [W m-2]\t [W m-2]\t [/]\t [/]\t [°]\t [/]\n"
     
     # Open the file and write the header and units
