@@ -52,7 +52,7 @@ output_file_path = data_path / "GLOB" / "B_and_D_Estimations_LYR"
 ###############################################################################
 
 # Load GLOB data
-ds_glob = xr.open_dataset(data_path / r"GLOB\GLOB_data_30sec_2025_NYA.nc")
+ds_glob = xr.open_dataset(data_path / r"GLOB\GLOB_data_5min_2025_NYA.nc")
 lat_glob = ds_glob.latitude.values
 lon_glob = ds_glob.longitude.values
 
@@ -62,11 +62,11 @@ import glob_functions_Faiman as fct
 # Define criteria and date range
 Criteria = "ERBS"
 
-month = 5  # For example, October
-year = 2024
+month = 3  # For example, October
+year = 2025
 
 # Create a daily date range for the specified month and year
-start_date = f'{year}-{month:02d}-01'
+start_date = f'{year}-{month:02d}-16'
 end_date = f'{year}-{month:02d}-{pd.Period(start_date).days_in_month}'
 dates = pd.date_range(start=start_date, end=end_date, freq='D')
 
@@ -144,7 +144,7 @@ for date in dates:
     date_production = f"Date of production: {current_date}\n"
     author = f"Produced by: {your_name}\n"
     header = "Best estimation of beam and diffuse irradiance with GLOB using the Faiman et al. (1992) method.\n\
-    Location: Ny-Alesund (...N ...E).\n"
+    Location: Ny-Alesund (78.92240N 11.92174E).\n"
     units = "[UTC]\t\t[W m-2]\t [W m-2]\t  [W m-2]\t [W m-2]\t [/]\t [/]\t [°]\t [/]\n"
     
     # Open the file and write the header and units

@@ -28,8 +28,6 @@ Contact: arthurg@unis.no
 Date: November 1, 2024
 """
 
-
-
 import pandas as pd
 from pathlib import Path
 
