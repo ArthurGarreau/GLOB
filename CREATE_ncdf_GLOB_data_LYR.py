@@ -84,7 +84,7 @@ file_2024 = data_path / "GLOB_data_30sec_2024.dat"
 
 file_KZ = data_path.parent / "Irradiance_ncdf" / "Adventdalen_global_horizontal_irradiances_LW_SW_all.nc"
 
-# %% ---- Create 5-min dataset ---- #
+# % ---- Create 5-min dataset ---- #
 
 # Read and combine data
 df_2023 = read_and_preprocess_data(file_2023)
@@ -118,10 +118,25 @@ ds_kZ = xr.open_dataset(file_KZ)
 albedo = ds_kZ['SWup'] / ds_kZ['SWdown']
 albedo = albedo.where(ds_kZ['SWup_quality'] == 'ok').drop_duplicates(dim='time')
 albedo = albedo.where((albedo >= 0) & (albedo <= 1))
+# Filter the albedo data between 10:00 and 12:00 for each day
+filtered_albedo = albedo.sel(time=albedo.indexes['time'][albedo.indexes['time'].hour >= 10])
+filtered_albedo = filtered_albedo.sel(time=filtered_albedo.indexes['time'][filtered_albedo.indexes['time'].hour < 12])
+
+# Group by day and calculate the mean albedo for each day
+daily_mean_albedo = filtered_albedo.resample(time='1D').mean(skipna=True)
+
+# Create a new variable with the same time frequency as the original albedo data
+new_albedo = xr.full_like(albedo, np.nan)  # Initialize with NaNs
+
+# Set the daily mean albedo values for each day
+for day in daily_mean_albedo.time.values:
+    daily_mean = daily_mean_albedo.sel(time=day).item()
+    new_albedo = new_albedo.where(new_albedo.time.dt.floor('D') != day, daily_mean)
+
 
 
 # Align albedo to match the 5-minute dataset's timestamps
-aligned_albedo = albedo.interp(time=timestamps_ds.values, method='linear')
+aligned_albedo = new_albedo.interp(time=timestamps_ds.values, method='linear')
 ds_5min['albedo'] = (('Timestamp'), aligned_albedo.values)
 ds_5min['albedo'].attrs.update({
     'units': 'dimensionless',

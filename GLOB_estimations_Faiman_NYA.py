@@ -52,7 +52,7 @@ output_file_path = data_path / "GLOB" / "B_and_D_Estimations_NYA"
 ###############################################################################
 
 # Load GLOB data
-ds_glob = xr.open_dataset(data_path / r"GLOB\GLOB_data_5min_2025_NYA.nc")
+ds_glob = xr.open_dataset(data_path / r"GLOB\GLOB_data_5min_2025.nc")
 lat_glob = ds_glob.latitude.values
 lon_glob = ds_glob.longitude.values
 
@@ -62,12 +62,13 @@ import glob_functions_Faiman as fct
 # Define criteria and date range
 Criteria = "ERBS"
 
-month = 3  # For example, October
+month = 4  # For example, October
 year = 2025
 
 # Create a daily date range for the specified month and year
-start_date = f'{year}-{month:02d}-1'
-end_date = f'{year}-{month:02d}-{pd.Period(start_date).days_in_month}'
+start_date = f'{year}-03-16'
+end_date = f'{year}-04-26'
+# end_date = f'{year}-{month:02d}-{pd.Period(start_date).days_in_month}'
 dates = pd.date_range(start=start_date, end=end_date, freq='D')
 
 # Define the azimuth directions and angles

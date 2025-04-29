@@ -85,7 +85,7 @@ combined_df = df_2025
 combined_df.index = pd.to_datetime(combined_df.index)
 
 # Resample to 5-minute intervals and compute the mean
-resampled_df = combined_df.resample('5T').mean()
+resampled_df = combined_df.resample('5min').mean()
 
 # Convert DataFrame to Xarray Dataset
 ds = xr.Dataset.from_dataframe(resampled_df)
@@ -108,8 +108,24 @@ timestamps_ds = timestamps_ds.drop_duplicates()
 albedo = ds['GHI_ground'] / ds['GHI']
 albedo = albedo.where((albedo >= 0) & (albedo <= 1))
 
+# Filter the albedo data between 10:00 and 12:00 for each day
+filtered_albedo = albedo.sel(Timestamp=albedo.indexes['Timestamp'][albedo.indexes['Timestamp'].hour >= 10])
+filtered_albedo = filtered_albedo.sel(Timestamp=filtered_albedo.indexes['Timestamp'][filtered_albedo.indexes['Timestamp'].hour < 12])
+
+# Group by day and calculate the mean albedo for each day
+daily_mean_albedo = filtered_albedo.resample(Timestamp='1D').mean(skipna=True)
+
+# Create a new variable with the same time frequency as the original albedo data
+new_albedo = xr.full_like(albedo, np.nan)  # Initialize with NaNs
+
+# Set the daily mean albedo values for each day
+for day in daily_mean_albedo.Timestamp.values:
+    daily_mean = daily_mean_albedo.sel(Timestamp=day).item()
+    new_albedo = new_albedo.where(new_albedo.Timestamp.dt.floor('D') != day, daily_mean)
+
+
 # Add albedo to the original dataset
-ds['albedo'] = (('Timestamp'), albedo.values)
+ds['albedo'] = (('Timestamp'), new_albedo.values)
 ds['albedo'].attrs.update({
     'units': 'dimensionless',
     'long_name': 'Surface Albedo',
@@ -152,7 +168,7 @@ ds['longitude'].attrs.update({
 
 # ---- Save to NetCDF ---- #
 
-output_file_5min = data_path / "GLOB_data_5min_2025_NYA.nc"
+output_file_5min = data_path / "GLOB_data_5min_2025.nc"
 
 # Remove conflicting attributes from 'Timestamp' before saving
 for attr in ['calendar', 'units']:

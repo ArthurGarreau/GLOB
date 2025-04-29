@@ -42,7 +42,7 @@ input_file_data_path_2025 = RAW_DATA / "DATA_2025"
 output_file_data_path = RAW_DATA.parent
 ###############################################################################
 
-
+"""
 # %% Data 30 seconds 2023
 # Load the data into a DataFrame
 input_file  = input_file_data_path_2023 / "CR1000X GLOB_Sec.dat" 
@@ -224,10 +224,8 @@ with open(output_file, 'r+') as outfile:
     outfile.write(existing_content)
 
 df= pd.read_csv(output_file, low_memory=False)
-
+"""
 # %% Data 30 seconds 2025 NYA
-
-import pandas as pd
 
 # Load the data into a DataFrame
 input_file  = input_file_data_path_2025 / "CR1000X_GLOB_online_GLOB_30Sec.dat" 
