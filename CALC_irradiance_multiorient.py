@@ -164,7 +164,7 @@ azimuth_angles_names = np.arange(0, 360, 15)
 
 # Define the date range
 start_date = datetime(2025, 3, 16)
-end_date = datetime(2025, 3, 31)
+end_date = datetime(2025, 4, 26)
 
 # Loop through each day
 current_date = start_date
