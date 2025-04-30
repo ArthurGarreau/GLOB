@@ -18,7 +18,9 @@ from datetime import datetime, timedelta
 data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data")
 kz_datafile_path = data_path / "Irradiance_ncdf" / "Adventdalen_global_horizontal_irradiances_LW_SW_all.nc"
 glob_estim_path = data_path / "GLOB" / "B_and_D_Estimations_LYR"
-output_plot_path = Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\Fig\Estim_Faiman\lyr")
+
+paper2_path =  Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2")
+output_plot_path = paper2_path / "PAPER_2_Data_Analysis" / "GLOB_scripts" / "Figures_all" / "Beam_and_Diffuse" / "LYR"
 
 ###############################################################################
 ds_glob = xr.open_dataset(data_path / "GLOB" / "GLOB_data_5min_2023-24.nc")

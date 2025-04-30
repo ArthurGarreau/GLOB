@@ -275,7 +275,7 @@ df = df.set_index('Timestamp')
 df.index = pd.DatetimeIndex(df.index)
 
 
-df.index = df.index.tz_localize('Etc/GMT-4').tz_convert('UTC')
+df.index = df.index.tz_localize('UTC')
 
 df_30s = df
 
@@ -286,7 +286,6 @@ df_30s = df_30s.fillna(-9999).round().astype(int)
 df_30s = df_30s.round().astype(int)
 
 df_30s['Temp'] = Temp.round(1)
-df_30s = df_30s[df_30s.index > '2023-02-23 12:00:00+00:00']
 
 
 df_30s.to_csv(output_file, header=True, index=True)
