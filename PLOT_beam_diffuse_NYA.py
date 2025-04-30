@@ -32,6 +32,7 @@ Created on Mon Apr 28 16:23:23 2025
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from pathlib import Path
 from datetime import datetime, timedelta
 import os
@@ -43,13 +44,14 @@ bsrn_datafile = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\Irradianc
 glob_estim_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB\B_and_D_Estimations_NYA")
 glob_nc_datafile = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB") / "GLOB_data_5min_2025.nc"
 
-output_plot_path = Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\Fig\Estim_Faiman\nya")
+paper2_path =  Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2")
+output_plot_path = paper2_path / "PAPER_2_Data_Analysis" / "GLOB_scripts" / "Figures_all" / "Beam_and_Diffuse" / "NYA"
 
 ###############################################################################
 
 # Define the date range
 start_date = datetime(2025, 3, 16)
-end_date = datetime(2025, 4, 26)
+end_date = datetime(2025, 3, 17)
 
 # Load the GHI data from the NetCDF file
 ds = xr.open_dataset(glob_nc_datafile)
@@ -109,20 +111,26 @@ while current_date <= end_date:
     plt.plot(diffuse_bsrn.index, diffuse_bsrn, 'k:', label='Diffuse BSRN')
     plt.plot(beam_glob.index, beam_glob, 'r', alpha=0.7, label='Beam GLOB')
     plt.plot(diffuse_glob.index, diffuse_glob, 'r:', alpha=0.7, label='Diffuse GLOB')
-    plt.plot(ghi_day.Timestamp, ghi_day, 'g', label='GHI pyr GLOB')
-    plt.plot(glob_data.index, glob_data["Constructed Global"], 'g--', label='Constructed GHI')
+    # plt.plot(ghi_day.Timestamp, ghi_day, 'g', label='GHI pyr GLOB')
+    # plt.plot(glob_data.index, glob_data["Constructed Global"], 'g--', label='Constructed GHI')
 
     plt.xlabel('Time (UTC)')
     plt.ylabel('Irradiance (W m-2)')
     plt.title(f'Beam and Diffuse Components - Ny-Ålesund - {file_date_str}')
     plt.legend()
+    # Set hourly ticks
+    plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=1))  # Tick every hour
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H'))  # Format as HH:MM
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
     plt.grid(True, linestyle=':')
 
     # Save the plot
     output_plot_path.mkdir(parents=True, exist_ok=True)
     output_file = output_plot_path / f"beam_diffuse_plot_{file_date_str}.png"
-    plt.savefig(output_file, bbox_inches='tight')
-    plt.close()
+    # plt.savefig(output_file, bbox_inches='tight')
+    # plt.close()
+    plt.show()
 
     print(f"Plot for {file_date_str} saved to {output_file}")
 
