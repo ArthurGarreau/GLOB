@@ -51,7 +51,7 @@ output_plot_path = paper2_path / "PAPER_2_Data_Analysis" / "GLOB_scripts" / "Fig
 
 # Define the date range
 start_date = datetime(2025, 3, 16)
-end_date = datetime(2025, 3, 17)
+end_date = datetime(2025, 3,19)
 
 # Load the GHI data from the NetCDF file
 ds = xr.open_dataset(glob_nc_datafile)
@@ -62,7 +62,7 @@ current_date = start_date
 while current_date <= end_date:
     # Generate the file paths for the current date
     file_date_str = current_date.strftime("%Y-%m-%d")
-    glob_filename = glob_estim_path / f"best_estimations_{file_date_str}_ERBS.csv"
+    glob_filename = glob_estim_path / f"best_estimations_{file_date_str}_ERBS_1min.csv"
 
     # Check if the GLOB file exists
     if not os.path.exists(glob_filename):
