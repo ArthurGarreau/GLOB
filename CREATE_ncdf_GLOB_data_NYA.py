@@ -40,6 +40,8 @@ data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB")
 
 ###############################################################################
 
+f = 1 #minute
+
 # ---- Function Definitions ---- #
 
 def calculate_solar_angles(timestamps, latitude, longitude, altitude=6, temperature=-6):
@@ -84,8 +86,10 @@ df_2025 = read_and_preprocess_data(file_2025)
 combined_df = df_2025
 combined_df.index = pd.to_datetime(combined_df.index)
 
-# Resample to 5-minute intervals and compute the mean
-resampled_df = combined_df.resample('5min').mean()
+# Resample to f-minute intervals and compute the mean
+combined_df.index = combined_df.index + pd.Timedelta(minutes=f/2)
+resampled_df = combined_df.resample(f'{f}min').mean()
+combined_df.index = combined_df.index - pd.Timedelta(minutes=f/2)
 
 # Convert DataFrame to Xarray Dataset
 ds = xr.Dataset.from_dataframe(resampled_df)
@@ -168,7 +172,7 @@ ds['longitude'].attrs.update({
 
 # ---- Save to NetCDF ---- #
 
-output_file_5min = data_path / "GLOB_data_5min_2025.nc"
+output_file = data_path / f"GLOB_data_{f}min_2025.nc"
 
 # Remove conflicting attributes from 'Timestamp' before saving
 for attr in ['calendar', 'units']:
@@ -176,10 +180,9 @@ for attr in ['calendar', 'units']:
         del ds['Timestamp'].attrs[attr]
 
 # Save datasets
-ds.to_netcdf(output_file_5min)
-
-print(f"5-minute NetCDF file created at: {output_file_5min}")
+ds.to_netcdf(output_file)
 
 # Print variables in the dataset
 for d in ds.variables:
     print(d)
+print(f"{f}-minute NetCDF file created at: {output_file}")

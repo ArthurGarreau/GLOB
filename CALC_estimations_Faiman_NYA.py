@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Beam and Diffuse Irradiance Calculation for GLOB in Longyearbyen
-================================================================
+Beam and Diffuse Irradiance Calculation for GLOB in Ny-Ålesund
+==============================================================
 
-This script calculates beam and diffuse irradiance using the Faiman et al. (1992) method for GLOB data in Longyearbyen.
-It processes GLOB data (GLOB_data_5min_2023-24.nc), estimates irradiance components, generates plots, and compares the results with reference data.
+This script calculates beam and diffuse irradiance using the Faiman et al. (1992) method for GLOB data in Ny-Ålesund.
+It processes GLOB data (GLOB_data_30sec_2025_NYA.nc), estimates irradiance components, generates plots, and compares the results with reference data.
 
 Key Features:
 -------------
@@ -36,26 +36,29 @@ Date: November 22, 2024
 import xarray as xr
 import pandas as pd
 import numpy as np
-from pathlib import Path
 import sys
 from itertools import combinations
 from datetime import datetime
+from config import SCRIPT_PATH, DATA_PATH
 
+f = 1 #min data frequency
 
 ############################## File Paths #####################################
-# Add script path for the importing the functions in glob_functions_Faiman.py
-sys.path.append(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis\GLOB_scripts")
 
-data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data")
-output_file_path = data_path / "GLOB" / "B_and_D_Estimations_LYR" 
+# Add script path for the importing the functions in glob_functions_Faiman.py
+sys.path.append(str(SCRIPT_PATH))
+
+input_file = DATA_PATH / f"GLOB_data_{f}min_2025.nc"
+output_file_path = SCRIPT_PATH / "GLOB_data" / "B_and_D_Estimations_NYA" 
 
 ###############################################################################
 
+
+
 # Load GLOB data
-ds_glob = xr.open_dataset(data_path / r"GLOB\GLOB_data_5min_2023-24.nc")
+ds_glob = xr.open_dataset(input_file)
 lat_glob = ds_glob.latitude.values
 lon_glob = ds_glob.longitude.values
-
 
 # % Beam and Diffuse Irradiance Calculation
 import glob_functions_Faiman as fct
@@ -63,14 +66,13 @@ import glob_functions_Faiman as fct
 # Define criteria and date range
 Criteria = "ERBS"
 
-year = 2024
-month = 5  # For example, October
-# Create a daily date range for the specified month and year
-start_date = f'{year}-{month:02d}-02'
-# month = 10
-end_date = f'{year}-{month:02d}-{pd.Period(start_date).days_in_month}'
-end_date = f'{year}-{month:02d}-03'
+month = 4  # For example, October
+year = 2025
 
+# Create a daily date range for the specified month and year
+start_date = f'{year}-03-20'
+end_date = f'{year}-05-05'
+# end_date = f'{year}-{month:02d}-{pd.Period(start_date).days_in_month}'
 dates = pd.date_range(start=start_date, end=end_date, freq='D')
 
 # Define the azimuth directions and angles
@@ -79,10 +81,9 @@ angles = [45, 90, 135]
 # Variables of interest for irradiance calculation
 variables = ['GHI'] + [f"{azimuth}_{angle}" for azimuth in azimuth_directions for angle in angles]
 
+
 # Generate all combinations of variables
 combs = list(combinations(variables, 2))
-
-# -----------------------------------------------------------------------------
 for date in dates: 
     date=date.strftime('%Y-%m-%d')
     
@@ -96,7 +97,7 @@ for date in dates:
     results = []
     
     # Loop over each minute in the day
-    TIMESTAMPS = pd.date_range(start=f"{date} 00:00:00", end=f"{date} 23:50:00", freq='10min', tz='UTC')
+    TIMESTAMPS = pd.date_range(start=f"{date} 00:00:00", end=f"{date} 23:59:00", freq=f'{f}min', tz='UTC')
     for timestamp in TIMESTAMPS:
         timestamp = pd.DatetimeIndex([timestamp])  # Ensure timestamp is in the desired format
         glob_value = df_glob_one_day.loc[timestamp]
@@ -106,7 +107,6 @@ for date in dates:
         # Extract the zenith angle
         zenith_angle = solar_position['zenith'].values[0]
  
-        # Use the optimized function
         # Use the optimized function
         D, I, D_prime, I_prime, error, comb_opt = fct.find_best_combination(combs, glob_value, zenith_angle, lat_glob, lon_glob)
         
@@ -139,7 +139,7 @@ for date in dates:
     
     # Convert results to a DataFrame
     results_df = pd.DataFrame(results)
-    output_file = output_file_path / f"best_estimations_{date}_{Criteria}.csv"
+    output_file = output_file_path / f"best_estimations_{date}_{Criteria}_{f}min.csv"
     
     # Write the header and units to the file
     # Get the current date
@@ -149,7 +149,7 @@ for date in dates:
     date_production = f"Date of production: {current_date}\n"
     author = f"Produced by: {your_name}\n"
     header = "Best estimation of beam and diffuse irradiance with GLOB using the Faiman et al. (1992) method.\n\
-Location: Adventdalen (78.200318N 15.840308E).\n"
+Location: Ny-Alesund (78.92240N 11.92174E).\n"
     units = "[UTC]\t\t[W m-2]\t [W m-2]\t  [W m-2]\t [W m-2]\t [/]\t [/]\t [°]\t [/]\n"
     
     # Open the file and write the header and units
@@ -162,4 +162,4 @@ Location: Adventdalen (78.200318N 15.840308E).\n"
     # Append the DataFrame to the file
     results_df.to_csv(output_file, index=False, mode='a', sep='\t', encoding='utf-8')
 
-
+ds_glob.close()

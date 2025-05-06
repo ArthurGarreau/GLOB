@@ -278,6 +278,29 @@ def solve_for_D_and_I(I_0, cos_z, D_prime, I_prime):
           
     return D, I
 
+def calc_Dprime_Iprime(I_0, zenith, D, I):
+    """
+    Calculate D' and I' from D and I using the provided formulas.
+
+    Parameters:
+        I_0 (float): Extraterrestrial irradiance.
+        zenith (float): Zenith angle (in degree).
+        D (float): Diffuse irradiance.
+        I (float): Beam irradiance.
+
+    Returns:
+        tuple: Calculated D' and I'.
+    """
+    
+    cos_z = np.cos(np.radians(zenith))
+        
+    # Calculate I' using the formula
+    I_prime = I*(1 + D / (I_0 * cos_z))
+
+    # Calculate D' using the formula
+    D_prime = (I_0 - I) * D / I_0
+    return D_prime, I_prime
+
 # Optimized function to find the best combination
 def find_best_combination(combs, glob_value, zenith_angle, lat, lon):
     """
