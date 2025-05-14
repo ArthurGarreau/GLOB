@@ -33,23 +33,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import calendar
-from pathlib import Path
 from datetime import datetime
 import os
+from config import SCRIPT_PATH, DATA_PATH
 
+f = 5 #min data frequency
 ############################## File Paths #####################################
 
-data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB")
-data_lyr_daily_dir_path = data_path / "MultiOrientations_Irradiance_Data_LYR"
-data_nya_daily_dir_path = data_path / "MultiOrientations_Irradiance_Data_NYA"
-data_nyabsrn_daily_dir_path = data_path / "MultiOrientations_Irradiance_Data_NYA_bsrn"
+data_lyr_daily_dir_path = DATA_PATH / "MultiOrientations_Irradiance_Data_LYR"
+data_nya_daily_dir_path = DATA_PATH / "MultiOrientations_Irradiance_Data_NYA"
+data_nyabsrn_daily_dir_path = DATA_PATH / "MultiOrientations_Irradiance_Data_NYA_bsrn"
 
 
-paper2_path =  Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\PAPER_2_Data_Analysis")
-save_fig_lyr_monthly_path = paper2_path / "GLOB_scripts" / "Figures_all" / "Polar_Heatmap" / "LYR" / "monthly"
-save_fig_lyr_daily_path = paper2_path / "GLOB_scripts" / "Figures_all" / "Polar_Heatmap" / "LYR" / "daily"
-save_fig_nya_monthly_path = paper2_path / "GLOB_scripts" / "Figures_all" / "Polar_Heatmap" / "NYA" / "monthly"
-save_fig_nya_daily_path = paper2_path / "GLOB_scripts" / "Figures_all" / "Polar_Heatmap" / "NYA" / "daily"
+save_fig_lyr_monthly_path = SCRIPT_PATH / "Figures_all" / "Polar_Heatmap" / "LYR" / "monthly"
+save_fig_lyr_daily_path = SCRIPT_PATH / "Figures_all" / "Polar_Heatmap" / "LYR" / "daily"
+save_fig_nya_monthly_path = SCRIPT_PATH / "Figures_all" / "Polar_Heatmap" / "NYA" / "monthly"
+save_fig_nya_daily_path = SCRIPT_PATH / "Figures_all" / "Polar_Heatmap" / "NYA" / "daily"
 
 
 ###############################################################################

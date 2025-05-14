@@ -40,7 +40,7 @@ data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB")
 
 ###############################################################################
 
-f = 5 #minute
+f = 10 #minute
 
 # ---- Function Definitions ---- #
 
@@ -115,13 +115,14 @@ ds['Timestamp'].attrs.update({
 ds = ds.drop_duplicates(dim='Timestamp')
 timestamps_ds = timestamps_ds.drop_duplicates()
 
-# ---- Albedo Calculation ---- #
+# ---- Albedo Calculation ---- #S
 
 # Load KZ dataset
 ds_kZ = xr.open_dataset(file_KZ)
 # Compute albedo and filter valid values (0 <= albedo <= 1)
 albedo = ds_kZ['SWup'] / ds_kZ['SWdown']
-albedo = albedo.where(ds_kZ['SWup_quality'] == 'ok').drop_duplicates(dim='time')
+albedo = albedo.drop_duplicates(dim='time')
+# albedo = albedo.where(ds_kZ['SWup_quality'] == 'ok').drop_duplicates(dim='time')
 albedo = albedo.where((albedo >= 0) & (albedo <= 1))
 # Filter the albedo data between 10:00 and 12:00 for each day
 filtered_albedo = albedo.sel(time=albedo.indexes['time'][albedo.indexes['time'].hour >= 10])
@@ -129,6 +130,8 @@ filtered_albedo = filtered_albedo.sel(time=filtered_albedo.indexes['time'][filte
 
 # Group by day and calculate the mean albedo for each day
 daily_mean_albedo = filtered_albedo.resample(time='1D').mean(skipna=True)
+mask = (daily_mean_albedo['time'] >= pd.Timestamp('2024-07-08')) & (daily_mean_albedo['time'] <= pd.Timestamp('2024-08-19'))
+daily_mean_albedo = daily_mean_albedo.where(~mask, 0.115)
 
 # Create a new variable with the same time frequency as the original albedo data
 new_albedo = xr.full_like(ds['GHI'], np.nan)  # Initialize with NaNs
@@ -139,7 +142,7 @@ for day in daily_mean_albedo.time.values:
     new_albedo = new_albedo.where(new_albedo.Timestamp.dt.floor('D') != day, daily_mean)
 
 
-# Align albedo to match the 5-minute dataset's timestamps
+# Align albedo to match the dataset's timestamps
 aligned_albedo = new_albedo.interp(Timestamp=timestamps_ds.values, method='linear')
 ds['albedo'] = (('Timestamp'), aligned_albedo.values)
 ds['albedo'].attrs.update({

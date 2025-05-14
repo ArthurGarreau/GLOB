@@ -40,7 +40,7 @@ data_path = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB")
 
 ###############################################################################
 
-f = 1 #minute
+f = 10 #minute
 
 # ---- Function Definitions ---- #
 
