@@ -10,7 +10,6 @@
 # Contact: arthurg@unis.no
 # Date: April 28, 2025
 
-spyder-kernels==3.0.*
 pandas
 xarray
 numpy
