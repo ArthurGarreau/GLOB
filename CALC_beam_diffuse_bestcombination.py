@@ -42,24 +42,32 @@ from config_path import SCRIPT_PATH, DATA_PATH
 import glob_functions_calculation as fct
 
 method = 'linear'; year = 2025; f = 10 #min data frequency
-
+pyrano_vars = [
+    ['GHI', 'N_45', 'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45', 'E_90', 'E_135',
+     'SE_45', 'SE_90', 'SE_135', 'S_45', 'S_90', 'S_135', 'SW_45', 'SW_90', 'SW_135',
+     'W_45', 'W_90', 'W_135', 'NW_45', 'NW_90', 'NW_135'],
+    ['GHI', 'N_45', 'N_90', 'N_135', 'E_45', 'E_90', 'E_135',
+     'S_45', 'S_90', 'S_135', 'W_45', 'W_90', 'W_135'],
+    ['GHI', 'N_45', 'N_90', 'E_45', 'E_90', 'S_45', 'S_90', 'W_45', 'W_90'],
+    ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
+    ]
+pyrano_vars = ['GHI','N_45', 'N_90', 'NE_45', 'NE_90', 'E_45', 'E_90',
+     'SE_45', 'SE_90', 'S_45', 'S_90', 'SW_45', 'SW_90',
+     'W_45', 'W_90', 'NW_45', 'NW_90']
 ############################## File Paths #####################################
 
 bsrn_datafile = DATA_PATH.parent / "Irradiance" / "NYA" / "NYA_radiation_2025-all.tab"
 input_file = DATA_PATH / f"GLOB_data_{f}min_{year}.nc"
 
-output_file_path = SCRIPT_PATH / "Data" / "Beam_Diffuse_Estimations"
+output_file_path = SCRIPT_PATH / "Data" / "Best_Beam_Diffuse_Estimations"
 output_file_bestestim = output_file_path / \
     f"{year}_bestestimation_beam_diffuse_{f}min_{method}.csv"
 
 ###############################################################################
 
-
-# Define the azimuth directions and angles of the pyranometers to use from GLOB
-azimuth_directions = ['N', 'E', 'S', 'W']; angles = [45, 90, 135]
-pyrano_var = ['GHI'] + [f"{azimuth}_{angle}" for azimuth in azimuth_directions for angle in angles]
 # Generate all combinations of pyrano_var
-combs = list(combinations(pyrano_var, 3))
+combs = list(combinations(pyrano_vars, 3))
+# combs_with_ghi = [comb + ('GHI',) for comb in combs]
 
 # Load NYA data (true_estimation)
 df_NYA = pd.read_csv(bsrn_datafile, sep='\t', skiprows=24, parse_dates=['Date/Time'], index_col='Date/Time')
@@ -132,14 +140,14 @@ f"\
 #\n\
 #[UTC]\t\t[W m-2]\t [W m-2]\t [/]\t [W m-2]\t [W m-2]t [/]\n"
 
-output_file = output_file_bestestim
+output_file_path.mkdir(parents=True, exist_ok=True)
 
 # Open the file and write the header and units
-with open(output_file, 'w', encoding='utf-8') as file:
+with open(output_file_bestestim, 'w', encoding='utf-8') as file:
     file.write(header)
 
 # Append the DataFrame to the file
-df_all_results.to_csv(output_file, index=True, mode='a', sep='\t', na_rep='NaN', encoding='utf-8')
+df_all_results.to_csv(output_file_bestestim, index=True, mode='a', sep='\t', na_rep='NaN', encoding='utf-8')
 
 ds_glob.close()
 

@@ -37,7 +37,7 @@ import re
 from config_path import SCRIPT_PATH
 import glob_functions_calculation as fct
 
-method = 'linear'; year = 2024; f = 10 #min data frequency
+method = 'nonlinear'; year = 2023; f = 10 #min data frequency
 
 pyrano_vars = [
     ['GHI', 'N_45', 'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45', 'E_90', 'E_135',
@@ -95,10 +95,10 @@ for pyrano_var in pyrano_vars:
     ### Define the range of tilt and azimuth angles
     tilt_angles = np.arange(0, 181, 5)  # Add the 54° angle
     azimuth_angles_calc = np.arange(-180, 180, 15)
-    azimuth_angles_names = np.arange(0, 360, 15)
+    azimuth_angles = np.arange(0, 360, 15)
     # Initialize a list to store results for each timestamp
     # Generate column names
-    column_names = [f'gti{orientation}_{tilt}' for orientation in azimuth_angles_names for tilt in tilt_angles]
+    column_names = [f'gti{orientation}_{tilt}' for orientation in azimuth_angles for tilt in tilt_angles]
     df_results = pd.DataFrame(columns=column_names)
     
     # Calculate irradiance for each combination of tilt and azimuth angles
@@ -110,14 +110,14 @@ for pyrano_var in pyrano_vars:
             theta_z = solar_angles['zenith'].values
             
             # Calculate components and irradiance
-            b = np.cos(np.radians(theta_i)) + albedo * np.cos(np.radians(theta_z)) * (1 - np.cos(np.radians(tilt))) / 2
-            d = (1 + np.cos(np.radians(tilt))) / 2 + albedo * (1 - np.cos(np.radians(tilt))) / 2
+            b = np.cos(np.radians(theta_i)) / np.cos(np.radians(theta_z)) 
+            d = (1 + np.cos(np.radians(tilt))) / 2 
+            r = (1 - np.cos(np.radians(tilt))) / 2
                            
-            R = b * beam_prime + d * diffuse_prime
+            R = (albedo * r + b) * beam_prime + (albedo * r + d) * diffuse_prime
     
             # Determine orientation and store results
-            orientation = fct.azimuth_to_orientation(azimuth)
-            df_results[f'gti{azimuth_angles_names[idx]}_{tilt}'] = R
+            df_results[f'gti{azimuth_angles[idx]}_{tilt}'] = R
     
     # Set the index to the Timestamp column, filter out negative values and round the values
     df_results.set_index(timestamps, inplace=True)
@@ -168,8 +168,6 @@ exec(script_code)
 
 """
 # %% CALC GTI with beam and diffuse from Ny-Ålesund
-
-
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -227,11 +225,12 @@ for tilt in tilt_angles:
         theta_i = fct.incident_angle(solar_angles, tilt, azimuth,  lat_nya, lon_nya)
 
         # Calculate components and irradiance
-        b = np.cos(np.radians(theta_i)) + albedo * np.cos(np.radians(theta_z)) * (1 - np.cos(np.radians(tilt))) / 2
-        d = (1 + np.cos(np.radians(tilt))) / 2 + albedo * (1 - np.cos(np.radians(tilt))) / 2
+        b = np.cos(np.radians(theta_i)) / np.cos(np.radians(theta_z)) 
+        d = (1 + np.cos(np.radians(tilt))) / 2 
+        r = (1 - np.cos(np.radians(tilt))) / 2
                        
-        R = b * beam_prime + d * diffuse_prime
-
+        R = (albedo * r + b) * beam_prime + (albedo * r + d) * diffuse_prime
+            
         # Determine orientation and store results
         orientation = fct.azimuth_to_orientation(azimuth)
         df_results[f'gti{azimuth_angles_names[idx]}_{tilt}'] = R
@@ -239,7 +238,7 @@ for tilt in tilt_angles:
 # Set the index to the Timestamp column, filter out negative values and round the values
 df_results.set_index(timestamps, inplace=True)
 df_results = df_results.where(df_results >= 0, np.nan)
-df_results = df_results.round().astype('Int64')
+df_results = df_results.replace([np.inf, -np.inf], np.nan).round().astype('Int64')
 
 today = datetime.now().strftime("%Y-%m-%d")
 current_date = datetime.now().strftime("%Y-%m-%d")
@@ -270,5 +269,4 @@ try:
     print(f"Results saved to\n {output_file}")
 except Exception as e:
     print(f"Error saving results for\n {output_file}: {e}")
-
 """

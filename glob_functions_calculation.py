@@ -432,21 +432,21 @@ def azimuth_to_orientation(azimuth):
     """
     # Determine the orientation based on the azimuth
     if azimuth == 0:
-        return 'S'
-    elif azimuth == -45:
-        return 'SE'
-    elif azimuth == -90:
-        return 'E'
-    elif azimuth == -135:
-        return 'NE'
-    elif azimuth == 180:
         return 'N'
-    elif azimuth == 135:
-        return 'NW'
-    elif azimuth == 90:
-        return 'W'
     elif azimuth == 45:
+        return 'NE'
+    elif azimuth == 90:
+        return 'E'
+    elif azimuth == 135:
+        return 'SE'
+    elif azimuth == 180 or azimuth == -180:
+        return 'S'
+    elif azimuth == 225:
         return 'SW'
+    elif azimuth == 270:
+        return 'W'
+    elif azimuth == 315:
+        return 'NW'
     else:
         return 'Unknown'
 

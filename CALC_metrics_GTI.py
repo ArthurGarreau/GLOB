@@ -10,7 +10,7 @@ import numpy as np
 from config_path import SCRIPT_PATH, DATA_PATH
 import glob_functions_calculation as fct
 
-# method = 'nonlinear'; year = 2025; f = 10 #min data frequency
+# method = 'nonlinear'; year = 2024; f = 10 #min data frequency
 
 for i in [5, 9, 13, 25]:
     pyrano_var = np.zeros(i)
@@ -26,13 +26,11 @@ for i in [5, 9, 13, 25]:
     
     # Determine validation pyranometers
     removed_pyrano = fct.find_content_between_braces(gti_estimation_datafile, line_number=4)
-    if removed_pyrano == ['']:
-        validation_pyrano = ['S_90', 'N_90', 'E_90', 'W_90']
-    else:
-        validation_pyrano = [
-            'NE_45', 'NE_90', 'NE_135', 'SE_45', 'SE_90', 'SE_135',
-            'SW_45', 'SW_90', 'SW_135', 'NW_45', 'NW_90', 'NW_135'
-        ]
+
+    validation_pyrano = [
+        'NE_45', 'NE_90', 'NE_135', 'SE_45', 'SE_90', 'SE_135',
+        'SW_45', 'SW_90', 'SW_135', 'NW_45', 'NW_90', 'NW_135'
+    ]
     
     gti_estimation_label = fct.create_gti_estimation_label(validation_pyrano)
     
