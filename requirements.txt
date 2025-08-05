@@ -11,7 +11,6 @@
 # Date: April 28, 2025
 
 pandas
-xarray
 numpy
 matplotlib
 pvlib
@@ -20,3 +19,5 @@ scikit-learn
 pathlib2  # Only needed if you are using Python < 3.4
 netcdf4
 h5netcdf
+xarray
+
