@@ -37,7 +37,7 @@ import re
 from config_path import SCRIPT_PATH
 import glob_functions_calculation as fct
 
-method = 'nonlinear'; year = 2023; f = 10 #min data frequency
+method = 'linear'; year = 2025; f = 10 #min data frequency
 
 pyrano_vars = [
     ['GHI', 'N_45', 'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45', 'E_90', 'E_135',
@@ -48,6 +48,19 @@ pyrano_vars = [
     ['GHI', 'N_45', 'N_90', 'E_45', 'E_90', 'S_45', 'S_90', 'W_45', 'W_90'],
     ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
     ]
+pyrano_vars = [['GHI', 'N_90', 'N_45']]
+pyrano_vars = [['GHI', 'E_45', 'N_45']]
+
+
+### Define the date range with timezone-aware datetime objects
+if year == 2023: start_date, end_date = (f'{year}-03-14', f'{year}-10-13') 
+if year == 2024: start_date, end_date = (f'{year}-04-14', f'{year}-10-13') 
+if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31') 
+
+### Define the range of tilt and azimuth angles
+tilt_angles = np.arange(0, 181, 5)
+azimuth_angles_calc = np.arange(-180, 180, 15)
+azimuth_angles = np.arange(0, 360, 15)
 
 for pyrano_var in pyrano_vars:
     ############################## File Paths #####################################
@@ -56,20 +69,16 @@ for pyrano_var in pyrano_vars:
     output_file_path = SCRIPT_PATH / "Data" / "GTI_Estimations"
     
     input_filename = input_file_path / \
-        f"{year}_estimation_beam_diffuse_{f}min_{method}_{len(pyrano_var)}pyrano.csv"
+        f"{year}_estimation_beam_diffuse_{f}min_{method}_{(pyrano_var)}pyrano.csv"
     output_file =  output_file_path / \
-        f"{year}_estimation_GTI_{f}min_{method}_{len(pyrano_var)}pyrano.csv"
+        f"{year}_estimation_GTI_{f}min_{method}_{(pyrano_var)}pyrano.csv"
     
     ###############################################################################
-    
-    ### Define the date range with timezone-aware datetime objects
-    if year == 2023: start_date, end_date = (f'{year}-03-14', f'{year}-10-13') 
-    if year == 2024: start_date, end_date = (f'{year}-04-14', f'{year}-10-13') 
-    if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-03-31') 
     
     # Load and filter data
     glob_estim_data = pd.read_csv(input_filename,parse_dates=['Timestamp'],index_col='Timestamp',
                              sep='\t',header=10)
+    glob_estim_data = glob_estim_data.sort_index()
     glob_estim_data = glob_estim_data.loc[start_date:end_date]
     
     # Find the pyranometers removed for the beam/diffuse estimations
@@ -83,7 +92,7 @@ for pyrano_var in pyrano_vars:
     # Join the header lines and search for the location pattern
     header_text = ''.join(header_lines)
     match = re.search(r'Location:\s*(\d+\.\d+)\s*[NnSs]\s*(\d+\.\d+)\s*[EeWw]', header_text)
-    lat_glob, lon_glob = float( match.groups()[0] ), float( match.groups()[1] )
+    lat_glob, lon_glob = float(match.groups()[0] ), float( match.groups()[1] )
     
     # Extract necessary columns
     beam = glob_estim_data['Beam'].values; diffuse = glob_estim_data['Diffuse'].values
@@ -91,11 +100,10 @@ for pyrano_var in pyrano_vars:
     beam_prime = glob_estim_data['Beam_prime']; diffuse_prime = glob_estim_data['Diffuse_prime']
     timestamps = glob_estim_data.index
     I_0 = pvlib.irradiance.get_extra_radiation(timestamps).values
+    solar_angles = fct.calculate_solar_angles(timestamps, lat_glob, lon_glob)
+    theta_z = solar_angles['zenith'].values; theta_z[theta_z > 88] = np.nan
     
-    ### Define the range of tilt and azimuth angles
-    tilt_angles = np.arange(0, 181, 5)  # Add the 54° angle
-    azimuth_angles_calc = np.arange(-180, 180, 15)
-    azimuth_angles = np.arange(0, 360, 15)
+
     # Initialize a list to store results for each timestamp
     # Generate column names
     column_names = [f'gti{orientation}_{tilt}' for orientation in azimuth_angles for tilt in tilt_angles]
@@ -105,10 +113,9 @@ for pyrano_var in pyrano_vars:
     
     for tilt in tilt_angles:
         for idx, azimuth in enumerate(azimuth_angles_calc):
-            solar_angles = fct.calculate_solar_angles(timestamps, lat_glob, lon_glob)
             theta_i = fct.incident_angle(solar_angles, tilt, azimuth, lat_glob, lon_glob)
-            theta_z = solar_angles['zenith'].values
-            
+            theta_i[theta_i > 90] = 90; ####  !!!! VERY IMPORTANT !!!! The incident angles above 90 have to be set to 0 to avoid the beam to have an influence
+
             # Calculate components and irradiance
             b = np.cos(np.radians(theta_i)) / np.cos(np.radians(theta_z)) 
             d = (1 + np.cos(np.radians(tilt))) / 2 
@@ -130,19 +137,18 @@ for pyrano_var in pyrano_vars:
     current_date = datetime.now().strftime("%Y-%m-%d")
     
     header = \
-    f"\
-    # Date of production: {current_date}\n\
-    # Produced by: Arthur Garreau\n\
-    # Estimation of solar irradiance for multiple orientations \
-    (refer to Eq. 2.1 in Faiman et al. (1992)). Each column represents an \
-    estimation for a specific tilt and azimuth, denoted as gti.azimuth_tilt.\n\
-    # Location: {lat_glob}N {lon_glob}E\n\
-    # The orientations missing are: {pyrano_missing}.\n\
-    # The orientations used are : {pyrano_used}\n\
-    #\n\
-    #\n\
-    #\n\
-    # [UTC]\t[W m-2]\n"
+f"\
+# Date of production: {current_date}\n\
+# Produced by: Arthur Garreau\n\
+# Estimation of solar irradiance for multiple orientations\
+ (refer to Eq. 2.1 in Faiman et al. (1992)). Each column represents an\n\
+# estimation for a specific tilt and azimuth, denoted as gti.azimuth_tilt.\n\
+# Location: {lat_glob}N {lon_glob}E\n\
+# The orientations missing are: {pyrano_missing}.\n\
+# The orientations used are : {pyrano_used}\n\
+#\n\
+#\n\
+# [UTC]\t[W m-2]\n"
     
     
     output_file_path.mkdir(parents=True, exist_ok=True)
@@ -156,17 +162,7 @@ for pyrano_var in pyrano_vars:
     except Exception as e:
         print(f"Error saving results for\n {output_file}: {e}")
 
-# % Execute the error script
-# Path to the script you want to run
-script_path = 'CALC_metrics_GTI.py'
-# Read the script file
-with open(script_path, 'r') as file:
-    script_code = file.read()
-# Execute the script
-exec(script_code)
 
-
-"""
 # %% CALC GTI with beam and diffuse from Ny-Ålesund
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -181,9 +177,11 @@ from config_path import SCRIPT_PATH, DATA_PATH
 # Parameters
 year = 2025; f = 10 #min data frequency
 ############################## File Paths #####################################
-output_file_path = SCRIPT_PATH / "Data" / "GTI_Estimations"
 
 bsrn_datafile = DATA_PATH.parent / "Irradiance" / "NYA" / "NYA_radiation_2025-all.tab"
+glob_datafile = DATA_PATH / "GLOB_data_10min_2025.nc"
+
+output_file_path = SCRIPT_PATH / "Data" / "GTI_Estimations"
 output_file =  output_file_path / f"{year}_estimation_GTI_{f}min_NYA.csv"
 
 ###############################################################################
@@ -194,25 +192,36 @@ bsrn_data_full = pd.read_csv(bsrn_datafile, sep='\t', skiprows=24,
 bsrn_data_full.index = bsrn_data_full.index.tz_localize('UTC')
 bsrn_data_full = bsrn_data_full.rename_axis('Timestamp')
 bsrn_data_full = bsrn_data_full.resample(f'{f}min').first()
-if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-03-31') 
+if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31') 
 bsrn_data_full = bsrn_data_full.loc[start_date:end_date]
 
+glob_ds = xr.open_dataset(glob_datafile)
+albedo_glob = glob_ds['albedo'].to_dataframe()
+albedo_glob.index = albedo_glob.index.tz_localize('UTC')
 
 lat_nya = 78.922700; lon_nya = 11.927300
 
 # Extract necessary columns
-beam = bsrn_data_full['DIR'].values; diffuse = bsrn_data_full['DIF'].values
+beam = bsrn_data_full['DIR']; diffuse = bsrn_data_full['DIF']
 albedo = bsrn_data_full['SWU']/bsrn_data_full['SWD']
+filtered_albedo = albedo.where((albedo.index.hour >= 10) & (albedo.index.hour < 14))
+daily_mean_albedo = filtered_albedo.resample('1D').mean()
+new_albedo = albedo*np.nan
+for day in daily_mean_albedo.index:
+    daily_mean = daily_mean_albedo[str(day)]
+    new_albedo[new_albedo.index.date == day.date()] = daily_mean
+    
 timestamps = bsrn_data_full.index
 solar_angles = fct.calculate_solar_angles(timestamps, lat_nya, lon_nya)
-theta_z = solar_angles['zenith'].values
+theta_z = solar_angles['zenith']; theta_z[theta_z > 80] = np.nan
 I_0 = pvlib.irradiance.get_extra_radiation(timestamps).values
 diffuse_prime, beam_prime = fct.calc_Dprime_Iprime(I_0, theta_z, diffuse, beam)
+albedo_glob = albedo_glob['albedo'].loc[timestamps]
 
 ### Define the range of tilt and azimuth angles
 tilt_angles = np.arange(0, 181, 5)  
 azimuth_angles_calc = np.arange(-180, 180, 15)
-azimuth_angles_names = np.arange(0, 360, 15)
+azimuth_angles_names = np.arange(0, 360, 15) 
 # Initialize a list to store results for each timestamp
 # Generate column names
 column_names = [f'gti{orientation}_{tilt}' for orientation in azimuth_angles_names for tilt in tilt_angles]
@@ -222,8 +231,9 @@ df_results = pd.DataFrame(columns=column_names)
 
 for tilt in tilt_angles:
     for idx, azimuth in enumerate(azimuth_angles_calc):
-        theta_i = fct.incident_angle(solar_angles, tilt, azimuth,  lat_nya, lon_nya)
-
+        theta_i = fct.incident_angle(solar_angles, tilt, azimuth, lat_nya, lon_nya)
+        theta_i[theta_i > 90] = 90; ####  !!!! VERY IMPORTANT !!!! The incident angles above 90 have to be set to 0 to avoid the beam to have an influence
+        
         # Calculate components and irradiance
         b = np.cos(np.radians(theta_i)) / np.cos(np.radians(theta_z)) 
         d = (1 + np.cos(np.radians(tilt))) / 2 
@@ -232,7 +242,6 @@ for tilt in tilt_angles:
         R = (albedo * r + b) * beam_prime + (albedo * r + d) * diffuse_prime
             
         # Determine orientation and store results
-        orientation = fct.azimuth_to_orientation(azimuth)
         df_results[f'gti{azimuth_angles_names[idx]}_{tilt}'] = R
 
 # Set the index to the Timestamp column, filter out negative values and round the values
@@ -269,4 +278,3 @@ try:
     print(f"Results saved to\n {output_file}")
 except Exception as e:
     print(f"Error saving results for\n {output_file}: {e}")
-"""

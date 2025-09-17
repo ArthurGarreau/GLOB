@@ -250,7 +250,7 @@ def estimation_diffuse_beam_Faiman(variables, glob_value, solar_angles, lat, lon
                 args=(b, d, r, GTI_glob),
                 max_nfev=1000  # Increase maximum number of function evaluations
             )
-            D_prime, B_prime, Albedo = results.x
+            D_prime, B_prime, albedo = results.x
 
         # Check if the solution is valid
         if not results.success:
@@ -278,6 +278,79 @@ def estimation_diffuse_beam_Faiman(variables, glob_value, solar_angles, lat, lon
     else:
         return [np.nan, np.nan, np.nan, np.nan, np.nan]
 
+def estimation_diffuse_beam_MonteCarlo(variables, glob_value, solar_angles, lat, lon, n_simulations, error):
+    """
+    Modified estimation_diffuse_beam_Faiman function for performing the Monte
+    Carlo calculations
+    """
+    timestamps = glob_value.name
+    albedo = glob_value['albedo']
+    table_azim_incli = create_variable_table(variables)
+
+    GTI_glob = glob_value[table_azim_incli.index].values
+
+    # Check if GTI_glob is full of NaNs
+    if np.all(np.isnan(GTI_glob)):
+        return (np.nan, np.nan)
+
+    # Interpolate NaN values in GTI_glob
+    GTI_glob = pd.Series(GTI_glob).interpolate(method='linear').values
+    inclinations = table_azim_incli['inclination'].values
+    azimuths = table_azim_incli['azimuth'].values
+
+    b = np.array(Coef_b(solar_angles, inclinations, azimuths, lat, lon))
+    d = np.array(Coef_d(inclinations))
+    r = np.array(Coef_r(inclinations))
+
+    X = np.column_stack((b, d, r))
+    # Remove the NaN of the coefficients table
+    rows_with_nan = np.isnan(X).any(axis=1)
+    X = X[~rows_with_nan]
+    b, d, r = X[:, 0], X[:, 1], X[:, 2]
+    
+    try:
+        # Monte Carlo simulation
+        
+        B_estimates = np.zeros(n_simulations)
+        D_estimates = np.zeros(n_simulations)
+        
+        for i in range(n_simulations):
+            #GTI_glob_noisy = GTI_glob * np.random.normal(1, error, size=len(GTI_glob))
+            albedo_noisy = albedo * np.random.normal(1, error, size=1)
+            
+            initial_guess = [10, 10]
+            # Add bounds if applicable
+            bounds = ([0, 0], [np.inf, np.inf])
+            results = least_squares(
+                function_least_square,
+                initial_guess,
+                bounds=bounds,
+                args=(b, d, r, GTI_glob, albedo_noisy),
+                max_nfev=1000  # Increase maximum number of function evaluations
+            )
+            D_prime, B_prime = results.x
+            zenith = solar_angles['zenith'].values # degrees
+            cos_z = np.cos(np.radians(zenith))
+            I_0 = pvlib.irradiance.get_extra_radiation(timestamps)
+
+            if not (np.isnan(D_prime) and np.isnan(B_prime)):
+                D, B = solve_for_D_and_B(I_0, cos_z, D_prime, B_prime)
+                if D>1 and D<1372 and B>1 and B<1372:
+                    D_estimates[i] = D
+                    B_estimates[i] = B
+                else:
+                    D_estimates[i] = np.nan
+                    B_estimates[i] = np.nan
+
+    except Exception as e:
+        print(f"Error calculation")
+        return (np.nan, np.nan)
+
+    if zenith < 90:
+        aux = (D_estimates, B_estimates)
+        return aux
+    else:
+        return (np.nan, np.nan)
 
 
 def find_best_estimation(combs, glob_value, solar_angles, lat, lon, true_estimation, method='linear'):
@@ -409,10 +482,10 @@ def calc_Dprime_Iprime(I_0, zenith, D, I):
     cos_z = np.cos(np.radians(zenith))
         
     # Calculate I' using the formula
-    I_prime = I*(1 + D / (I_0 * cos_z))
+    I_prime = I*(cos_z + D / I_0)
 
     # Calculate D' using the formula
-    D_prime = (I_0 - I) * D / I_0
+    D_prime = (I_0 - I*cos_z) * D / I_0
     return D_prime, I_prime
 
 def azimuth_to_orientation(azimuth):

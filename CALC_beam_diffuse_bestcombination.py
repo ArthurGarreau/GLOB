@@ -42,15 +42,15 @@ from config_path import SCRIPT_PATH, DATA_PATH
 import glob_functions_calculation as fct
 
 method = 'linear'; year = 2025; f = 10 #min data frequency
-pyrano_vars = [
-    ['GHI', 'N_45', 'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45', 'E_90', 'E_135',
-     'SE_45', 'SE_90', 'SE_135', 'S_45', 'S_90', 'S_135', 'SW_45', 'SW_90', 'SW_135',
-     'W_45', 'W_90', 'W_135', 'NW_45', 'NW_90', 'NW_135'],
-    ['GHI', 'N_45', 'N_90', 'N_135', 'E_45', 'E_90', 'E_135',
-     'S_45', 'S_90', 'S_135', 'W_45', 'W_90', 'W_135'],
-    ['GHI', 'N_45', 'N_90', 'E_45', 'E_90', 'S_45', 'S_90', 'W_45', 'W_90'],
-    ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
-    ]
+# pyrano_vars = [
+#     ['GHI', 'N_45', 'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45', 'E_90', 'E_135',
+#      'SE_45', 'SE_90', 'SE_135', 'S_45', 'S_90', 'S_135', 'SW_45', 'SW_90', 'SW_135',
+#      'W_45', 'W_90', 'W_135', 'NW_45', 'NW_90', 'NW_135'],
+#     ['GHI', 'N_45', 'N_90', 'N_135', 'E_45', 'E_90', 'E_135',
+#      'S_45', 'S_90', 'S_135', 'W_45', 'W_90', 'W_135'],
+#     ['GHI', 'N_45', 'N_90', 'E_45', 'E_90', 'S_45', 'S_90', 'W_45', 'W_90'],
+#     ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
+#     ]
 pyrano_vars = ['GHI','N_45', 'N_90', 'NE_45', 'NE_90', 'E_45', 'E_90',
      'SE_45', 'SE_90', 'S_45', 'S_90', 'SW_45', 'SW_90',
      'W_45', 'W_90', 'NW_45', 'NW_90']
@@ -84,7 +84,7 @@ all_results = []
 # Create a daily date range for the specified month and year
 if year == 2023: start_date, end_date = (f'{year}-03-14', f'{year}-10-13')
 if year == 2024: start_date, end_date = (f'{year}-04-14', f'{year}-10-13')
-if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-03-31')
+if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31')
 dates = pd.date_range(start=start_date, end=end_date, freq='D')
 # % Beam and Diffuse Irradiance Calculation
 for date in dates:
