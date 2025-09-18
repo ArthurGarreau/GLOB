@@ -1,32 +1,57 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri May 30 17:15:59 2025
-@author: arthurg
+Error Analysis of GTI (Global Tilted Irradiance) Estimations
+===========================================================
+This script evaluates the performance of GTI estimations using cross-validation with GLOB pyranometer data.
+It calculates RMSE, nRMSE, MBE, and nMBE for each tilted direction and configuration,
+and saves the results to Excel files for both GLOB and NY-Ålesund (NYA) estimations.
+
+There is a second part in the script to calculate the metrics from the GTI estimations 
+madw with the beam and diffuse measurement of the BSRN station in Ny-Ålesund.
+
+Key Features:
+-------------
+- Loads GLOB pyranometer data and GTI estimation results.
+- Calculates error metrics for each tilted direction and pyranometer configuration.
+- Performs cross-validation by removing specific orientations and comparing estimations.
+- Outputs results to Excel files for further analysis.
+
+Dependencies:
+-------------
+- pandas
+- xarray
+- numpy
+- config_path (custom module for file paths)
+- glob_functions_calculation (custom module for utility functions)
+
+Author: Arthur Garreau
+Contact: arthurg@unis.no
+Date: May 30, 2025
 """
+
 import pandas as pd
 import xarray as xr
 import numpy as np
-from config_path import SCRIPT_PATH, DATA_PATH
+from config_path import GLOB_DATA_PATH, GTI_DATA_PATH
 import glob_functions_calculation as fct
 
 # Parameters
 method = 'linear'; year = 2025; f = 10 #min data frequency
 
 ############################## File Paths #####################################
-glob_datafile = DATA_PATH / f"GLOB_data_10min_{year}.nc"
+glob_datafile = GLOB_DATA_PATH / f"GLOB_data_10min_{year}.nc"
 
-output_file = SCRIPT_PATH / 'Data' / "GTI_estimations" / \
-    f"{year}_error_GTI_{method}.xlsx"
+output_file = GTI_DATA_PATH / f"{year}_error_GTI_{method}.xlsx"
 
 ###############################################################################
     
 results_df = pd.DataFrame()
 for idx, pyr_nr in enumerate([3, 5, 9, 13, 25]):
     pyrano_var = np.zeros(pyr_nr)
-    GTI_estimation_datafile = SCRIPT_PATH / 'Data' / "GTI_estimations" / \
+    GTI_estimation_datafile = GTI_DATA_PATH / \
         f"{year}_estimation_GTI_{f}min_{method}_{pyr_nr}pyrano.csv"
     if pyr_nr == 3:
-        GTI_estimation_datafile = SCRIPT_PATH / 'Data' / "GTI_estimations" / \
+        GTI_estimation_datafile = GTI_DATA_PATH / \
             f"{year}_estimation_GTI_{f}min_{method}_['GHI', 'E_45', 'N_45']pyrano.csv"
     # Determine validation pyranometers
     removed_pyrano = fct.find_content_between_braces(GTI_estimation_datafile, line_number=4)
@@ -98,12 +123,13 @@ results_df.to_excel(output_file, sheet_name='Sheet1', index=False)
 print(f"Error metrics saved to {output_file}")
 
 
+"""
 # %% Metrics for NYÅ estimations of GTI
 
 import pandas as pd
 import xarray as xr
 import numpy as np
-from config_path import SCRIPT_PATH, DATA_PATH
+from config_path import GLOB_DATA_PATH, GTI_DATA_PATH
 import glob_functions_calculation as fct
 
 # Parameters
@@ -112,12 +138,10 @@ year = 2025; f = 10 #min data frequency
 results_df = pd.DataFrame()
 
 ############################## File Paths #####################################
-glob_datafile = DATA_PATH / f"GLOB_data_10min_{year}.nc"
-GTI_estimation_datafile = SCRIPT_PATH / 'Data' / "GTI_estimations" / \
-    f"{year}_estimation_GTI_{f}min_NYA.csv"
+glob_datafile = GLOB_DATA_PATH / f"GLOB_data_10min_{year}.nc"
+GTI_estimation_datafile = GTI_DATA_PATH / f"{year}_estimation_GTI_{f}min_NYA.csv"
 
-output_file = SCRIPT_PATH / 'Data' / "GTI_estimations" / \
-    f"{year}_error_GTI_NYA.xlsx"
+output_file = GTI_DATA_PATH / f"{year}_error_GTI_NYA.xlsx"
 
 ###############################################################################
 
@@ -188,5 +212,5 @@ with open(output_file, 'w') as file:
 
 results_df.to_excel(output_file, sheet_name='Sheet1', index=False)
 print(f"Error metrics saved to {output_file}")
-
+"""
 

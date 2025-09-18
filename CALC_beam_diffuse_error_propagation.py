@@ -1,8 +1,31 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Aug 19 11:13:50 2025
+Beam and Diffuse Error Propagation with a Monte Carlo Approach
+==============================================================
 
-@author: arthurg
+This script uses a Monte Carlo approach to understand how the measurement error 
+propagates to the estimations error of beam and diffuse through the model.
+It makes estimations of beam and diffuse by inputing a random noise  
+to the input of the model, i.e. GLOB pyranometers data and albedo data.
+
+Key Features:
+-------------
+- Loads GLOB data from a NetCDF file.
+- Uses a Monte Carlo approach to calculate 1000 times beam and diffuse with 
+  the model and output the error due to the input noise.
+  
+Dependencies:
+-------------
+- xarray
+- pandas
+- numpy
+- scipy.stats
+- datetime
+- Custom module: glob_functions_calculation
+
+Author: Arthur Garreau
+Contact: arthurg@unis.no
+Date: July 29, 2024
 """
 
 # %% Load Libraries
@@ -11,7 +34,7 @@ import pandas as pd
 import numpy as np
 import scipy.stats as stats
 from datetime import datetime
-from config_path import SCRIPT_PATH, DATA_PATH
+from config_path import B_D_DATA_PATH, GLOB_DATA_PATH
 import glob_functions_calculation as fct
 
 ### Modified function for performing Monte Carlo calculation
@@ -29,19 +52,18 @@ pyrano_vars = [['GHI', 'N_45', 'E_45', 'S_45', 'W_45'],
 #      'S_45', 'S_90', 'S_135', 'W_45', 'W_90', 'W_135']]
 ############################## File Paths #####################################
 
-input_file = DATA_PATH / f"GLOB_data_{f}min_{year}.nc"
-output_file_path = SCRIPT_PATH / "Data" / "Beam_Diffuse_Estimations"
+glob_datafile = GLOB_DATA_PATH / f"GLOB_data_{f}min_{year}.nc"
+
+output_file_path = B_D_DATA_PATH
 
 ###############################################################################
-
 
 for pyrano_var in pyrano_vars:
 
     output_file = output_file_path / f"{year}_MCestimation_beam_diffuse_{method}_{len(pyrano_var)}pyrano_noiseAlbedo_error_{error}.csv"
     
-    
     # Load GLOB data
-    ds_glob = xr.open_dataset(input_file)
+    ds_glob = xr.open_dataset(glob_datafile)
     lat_glob = float(ds_glob.latitude.values); lon_glob = float(ds_glob.longitude.values)
     
     # List to store all results
@@ -109,6 +131,9 @@ for pyrano_var in pyrano_vars:
 # % of p-value<0.05 Diffuse = {percent_pvalue_D_MC.round(2)} % \n\
 # % of p-value<0.05 Beam = {percent_pvalue_B_MC.round(2)} % \n\
 #[UTC]\t\t[%]\t [%]\t [%]\t [%]\n"
+        
+    # Create the folder if it doesn't exist already
+    output_file.mkdir(parents=True, exist_ok=True)
     
     # Open the file and write the header and units
     with open(output_file, 'w', encoding='utf-8') as file:

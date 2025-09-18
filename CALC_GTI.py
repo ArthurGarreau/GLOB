@@ -1,29 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-Solar Irradiance Calculation Script
-===================================
+Global Tilted Irradiance Calculation Script
+===========================================
 
-This script calculates the solar irradiance (W m-2) on multiple orientations using Eq. 2.1 from Faiman et al. (1992).
-The calculations are performed for a specified range of tilt and azimuth angles over a given date range.
+This script calculates the solar irradiance (W m-2) on multiple orientations 
+using Eq. 2.1 from Faiman et al. (1992).
+The calculations are performed for a specified range of tilt and azimuth angles
+ over a given date range.
 
 Key Features:
 -------------
 - Loads daily solar data from CSV files.
 - Computes the incident and zenith angles for each combination of tilt and azimuth angles.
 - Calculates the irradiance using the beam and diffuse components of solar radiation.
-- Filters out negative irradiance values.
 - Saves the results to CSV files with a detailed header including metadata.
 
 Dependencies:
 -------------
 - numpy
 - pandas
-- matplotlib
-- pathlib
 - datetime
-- sys
-- os
-- Custom module: glob_functions_Faiman
+- re
+- pvlib
+- Custom module: glob_functions_calculation
 
 Author: Arthur Garreau
 Date: April 24, 2025
@@ -34,7 +33,7 @@ import pandas as pd
 import pvlib
 from datetime import datetime
 import re
-from config_path import SCRIPT_PATH
+from config_path import B_D_DATA_PATH, GTI_DATA_PATH
 import glob_functions_calculation as fct
 
 method = 'linear'; year = 2025; f = 10 #min data frequency
@@ -65,12 +64,9 @@ azimuth_angles = np.arange(0, 360, 15)
 for pyrano_var in pyrano_vars:
     ############################## File Paths #####################################
     
-    input_file_path = SCRIPT_PATH / "Data" / "Beam_Diffuse_Estimations"
-    output_file_path = SCRIPT_PATH / "Data" / "GTI_Estimations"
-    
-    input_filename = input_file_path / \
+    input_filename = B_D_DATA_PATH / \
         f"{year}_estimation_beam_diffuse_{f}min_{method}_{(pyrano_var)}pyrano.csv"
-    output_file =  output_file_path / \
+    output_file =  GTI_DATA_PATH / \
         f"{year}_estimation_GTI_{f}min_{method}_{(pyrano_var)}pyrano.csv"
     
     ###############################################################################
@@ -151,7 +147,7 @@ f"\
 # [UTC]\t[W m-2]\n"
     
     
-    output_file_path.mkdir(parents=True, exist_ok=True)
+    GTI_DATA_PATH.mkdir(parents=True, exist_ok=True)
     # Open the file and write the header and units
     with open(output_file, 'w', encoding='utf-8') as file:
         file.write(header)
@@ -165,24 +161,21 @@ f"\
 
 # %% CALC GTI with beam and diffuse from Ny-Ålesund
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import numpy as np
 import pvlib
 from datetime import datetime
 import xarray as xr
 import glob_functions_calculation as fct
-from config_path import SCRIPT_PATH, DATA_PATH
+from config_path import NYA_DATA_PATH, GLOB_DATA_PATH, GTI_DATA_PATH
 
 # Parameters
 year = 2025; f = 10 #min data frequency
 ############################## File Paths #####################################
 
-bsrn_datafile = DATA_PATH.parent / "Irradiance" / "NYA" / "NYA_radiation_2025-all.tab"
-glob_datafile = DATA_PATH / "GLOB_data_10min_2025.nc"
+bsrn_datafile = NYA_DATA_PATH / "NYA_radiation_2025-all.tab"
+glob_datafile = GLOB_DATA_PATH / "GLOB_data_10min_2025.nc"
 
-output_file_path = SCRIPT_PATH / "Data" / "GTI_Estimations"
-output_file =  output_file_path / f"{year}_estimation_GTI_{f}min_NYA.csv"
+output_file = GTI_DATA_PATH / f"{year}_estimation_GTI_{f}min_NYA.csv"
 
 ###############################################################################
 
@@ -268,8 +261,9 @@ estimation for a specific tilt and azimuth, denoted as gti.azimuth_tilt.\n\
 #\n\
 # [UTC]\t[W m-2]\n"
 
+# Create the folder if it doesn't exist already
+GTI_DATA_PATH.mkdir(parents=True, exist_ok=True)
 
-output_file_path.mkdir(parents=True, exist_ok=True)
 # Open the file and write the header and units
 with open(output_file, 'w', encoding='utf-8') as file:
     file.write(header)

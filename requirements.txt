@@ -16,7 +16,7 @@ matplotlib
 pvlib
 joblib
 scikit-learn
-pathlib2  # Only needed if you are using Python < 3.4
+#pathlib2  # Only needed if you are using Python < 3.4
 netcdf4
 h5netcdf
 xarray

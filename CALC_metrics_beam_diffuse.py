@@ -1,23 +1,43 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri May 30 17:15:59 2025
-@author: arthurg
+Error Analysis of Beam and Diffuse Irradiance Estimations
+=========================================================
+This script evaluates the performance of different models for estimating beam and diffuse irradiance
+using BSRN reference data from Ny-Ålesund, Svalbard. It calculates RMSE, nRMSE, MBE, and nMBE
+for each model and configuration, and saves the results to an Excel file.
+
+Key Features:
+-------------
+- Loads BSRN reference data and GLOB pyranometer estimations.
+- Calculates beam and diffuse irradiance using Erbs, Perez, and Orgill-Holland models.
+- Computes error metrics (RMSE, nRMSE, MBE, nMBE) for each model and GLOB configuration.
+- Handles albedo data and calculates average albedo and MBE for nonlinear methods.
+- Outputs results to an Excel file for further analysis.
+
+Dependencies:
+-------------
+- pandas
+- numpy
+- pvlib
+- config_path (custom module for file paths)
+
+Author: Arthur Garreau
+Contact: arthurg@unis.no
+Date: May 30, 2025
 """
+
 import pandas as pd
 import numpy as np
-from config_path import SCRIPT_PATH, DATA_PATH
-import pvlib, re
+from config_path import NYA_DATA_PATH, B_D_DATA_PATH
+import pvlib
 
 # Parameters
-# method = 'nonlinear'; year = 2025; f = 10 #min data frequency
-
+method = 'nonlinear'; year = 2025; f = 10 #min data frequency
+three_pyranometers = 'no'
 ############################## File Paths #####################################
-bsrn_datafile = DATA_PATH.parent / "Irradiance" / "NYA" / "NYA_radiation_2025-all.tab"
-
+bsrn_datafile = NYA_DATA_PATH / "NYA_radiation_2025-all.tab"
     
-output_file = SCRIPT_PATH / 'Data' / "Beam_Diffuse_Estimations" / \
-    f"{year}_error_beam_diffuse_{method}_3pyr.xlsx"
-
+output_file = B_D_DATA_PATH / f"{year}_error_beam_diffuse_{method}.xlsx"
 ###############################################################################
 
 # Metric calculation functions
@@ -99,20 +119,28 @@ beam_perez, diffuse_perez = perez_dni, ghi_bsrn - np.cos(np.radians(zenith)) * p
 orgill_hollands = pvlib.irradiance.orgill_hollands(ghi_bsrn, zenith, time)
 beam_oh, diffuse_oh = orgill_hollands['dni'], orgill_hollands['dhi']
 
-pyrano_vars = [
-    ['GHI', 'N_90', 'N_45'],
-    ['GHI', 'E_45', 'W_45'],
-    ['GHI', 'S_45', 'W_45'],
-    ['GHI', 'E_45', 'W_45']]
-
-# pyrano_vars = [5, 9, 13, 25]
+if three_pyranometers == 'yes':
+    # Case with 3 pyranometers
+    output_file = B_D_DATA_PATH / f"{year}_error_beam_diffuse_{method}_3pyrano.xlsx"
+    pyrano_vars = [
+        ['GHI', 'N_90', 'N_45'],
+        ['GHI', 'E_45', 'W_45'],
+        ['GHI', 'S_45', 'W_45'],
+        ['GHI', 'E_45', 'W_45']] 
+else: pyrano_vars = [5, 9, 13, 25] # General case
 
 results_df = pd.DataFrame()
 for idx, pyr_nr in enumerate(pyrano_vars):
 
     ############################## File Paths #####################################
-    beam_diff_estim_datafile = SCRIPT_PATH / 'Data' / "Beam_Diffuse_Estimations" / \
-        f"{year}_estimation_beam_diffuse_{f}min_{method}_{str(pyr_nr)}pyrano.csv"
+    if three_pyranometers == 'yes':
+        # Case with 3 pyranometers
+        beam_diff_estim_datafile = B_D_DATA_PATH / \
+            f"{year}_error_beam_diffuse_{method}_{pyr_nr}.xlsx"
+    else: 
+        beam_diff_estim_datafile = B_D_DATA_PATH / \
+            f"{year}_estimation_beam_diffuse_{f}min_{method}_{str(pyr_nr)}pyrano.csv"
+        
     ###############################################################################
   
     glob_estimation_data = pd.read_csv(beam_diff_estim_datafile, sep='\t', parse_dates=['Timestamp'], index_col=['Timestamp'], skiprows=10)
@@ -145,6 +173,7 @@ results_df = pd.concat([results_df, erbs_df, perez_df, oh_df], ignore_index=True
 
 # Write the results to a CSV file
 with open(output_file, 'w') as file:
-    file.write("Error of the beam and diffuse components (RMSE and MBE) based on Ny-Alesund BSRN data.\n")
+    file.write("Error of the beam and diffuse components (RMSE and MBE) based "
+"on Ny-Alesund BSRN data.\n")
 results_df.to_excel(output_file, sheet_name='Sheet1', index=False)
 print(f"Results saved to {output_file}")
