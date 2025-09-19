@@ -1,6 +1,6 @@
 # GLOB: Multiface Solar Irradiance Analysis Toolkit
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
 **GLOB** is a Python-based toolkit for analyzing solar irradiance data from a 26-pyranometer array (Apogee SP-110), designed for Arctic environments. This project is part of my PhD research at The University Centre in Svalbard, funded by The Arctic Field Grant (Grant nr. xxx).
 
