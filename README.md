@@ -115,22 +115,21 @@ The following table describes the **variable names in the NetCDF data files** fo
 
 ## Data Workflow
 
-### **Option 1: Use Preprocessed Data (Recommended)**
-Preprocessed NetCDF data files are available for download from the **Arctic Data Centre** (link will be added soon). If you use these files, you can **skip the data preprocessing step** and directly proceed to irradiance estimation.
+### 1.1 Use Preprocessed Data (Recommended)
+  Preprocessed NetCDF data files are available for download from the **Arctic Data Centre** (link will be added soon). If you use these files, you can **skip the data preprocessing step** and directly proceed to irradiance estimation.
 
-### **Option 2: Process Raw Data**
-1. **Preprocessing**
+### 1.2 Process Raw Data
    Run `DATA_GLOB_csvdata.py` → `DATA_create_ncdf_*.py` to generate NetCDF files.
    *(Note: This step is only necessary if you have raw CSV data.)*
 
-2. **Estimation**
+### 2. Estimation
    Use `CALC_GTI.py`, `CALC_beam_diffuse*.py` to estimate GTI, beam, and diffuse irradiance from NetCDF data.
    *(~1 hour/month for full-year data.)*
 
-3. **Error Analysis**
+### 3. Error Analysis
    Run `CALC_beam_diffuse_error_propagation.py` for uncertainty quantification.
 
-4. **Visualization**
+### 4. Visualization
    Use `PLOT_PAPER2.py` to visualize results.
 
 ---
@@ -141,3 +140,6 @@ Preprocessed NetCDF data files are available for download from the **Arctic Data
    ```bash
    git clone https://github.com/ArthurGarreau/GLOB.git
    cd GLOB
+
+2. **Adapt the paths**
+  Modify the path in the script "config_path.py" and run it to create the necessary folders.
