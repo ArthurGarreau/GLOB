@@ -8,9 +8,9 @@ Created on Tue May  6 11:52:03 2025
 
 from pathlib import Path
 
-
 #### MAIN PATHS ####
-SCRIPT_PATH = Path(r"C:\Users\arthurg\OneDrive - Universitetssenteret på Svalbard AS\Documents\UNIS_PhD\PAPER_2\GLOB_scripts")
+SCRIPT_PATH = Path(r'C:\Users\arthurg\OneDrive - Universitetssenteret på '+ 
+r'Svalbard AS\Documents\UNIS_PhD\PAPER_2\DATA_ANALYSIS\GLOB_scripts')
 # Location to output plots
 PLOT_PATH = SCRIPT_PATH.parent 
 # Location to retrieve data for estimations
