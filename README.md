@@ -68,7 +68,7 @@ The following table describes the **variable names in the NetCDF data files** fo
 
 ## Scripts
 
-### **0. Path Scripts
+### **0. Path Scripts**
 - **`config_path.py`**: Central configuration file containing all file paths. Must be modified to match your system. Running this script creates all necessary project folders:
   ```bash
   python config_path.py
