@@ -47,8 +47,8 @@ pyrano_vars = [
     ['GHI', 'N_45', 'N_90', 'E_45', 'E_90', 'S_45', 'S_90', 'W_45', 'W_90'],
     ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
     ]
-pyrano_vars = [['GHI', 'N_90', 'N_45']]
-pyrano_vars = [['GHI', 'E_45', 'N_45']]
+# pyrano_vars = [['GHI', 'N_90', 'N_45']]
+# pyrano_vars = [['GHI', 'E_45', 'N_45']]
 
 
 ### Define the date range with timezone-aware datetime objects
@@ -57,17 +57,20 @@ if year == 2024: start_date, end_date = (f'{year}-04-14', f'{year}-10-13')
 if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31') 
 
 ### Define the range of tilt and azimuth angles
-tilt_angles = np.arange(0, 181, 5)
+tilt_angles_calc = np.arange(0, 181, 5)
 azimuth_angles_calc = np.arange(-180, 180, 15)
 azimuth_angles = np.arange(0, 360, 15)
 
 for pyrano_var in pyrano_vars:
+    if len(pyrano_var)==3: pyrano_var_name = pyrano_var
+    else: pyrano_var_name = len(pyrano_var)
+        
     ############################## File Paths #####################################
     
     input_filename = B_D_DATA_PATH / \
-        f"{year}_estimation_beam_diffuse_{f}min_{method}_{(pyrano_var)}pyrano.csv"
+        f"{year}_estimation_beam_diffuse_{f}min_{method}_{pyrano_var_name}pyrano.csv"
     output_file =  GTI_DATA_PATH / \
-        f"{year}_estimation_GTI_{f}min_{method}_{(pyrano_var)}pyrano.csv"
+        f"{year}_estimation_GTI_{f}min_{method}_{pyrano_var_name}pyrano.csv"
     
     ###############################################################################
     
@@ -95,33 +98,15 @@ for pyrano_var in pyrano_vars:
     albedo = glob_estim_data['Albedo'].values
     beam_prime = glob_estim_data['Beam_prime']; diffuse_prime = glob_estim_data['Diffuse_prime']
     timestamps = glob_estim_data.index
-    I_0 = pvlib.irradiance.get_extra_radiation(timestamps).values
     solar_angles = fct.calculate_solar_angles(timestamps, lat_glob, lon_glob)
     theta_z = solar_angles['zenith'].values; theta_z[theta_z > 88] = np.nan
     
-
-    # Initialize a list to store results for each timestamp
-    # Generate column names
-    column_names = [f'gti{orientation}_{tilt}' for orientation in azimuth_angles for tilt in tilt_angles]
-    df_results = pd.DataFrame(columns=column_names)
-    
     # Calculate irradiance for each combination of tilt and azimuth angles
-    
-    for tilt in tilt_angles:
-        for idx, azimuth in enumerate(azimuth_angles_calc):
-            theta_i = fct.incident_angle(solar_angles, tilt, azimuth, lat_glob, lon_glob)
-            theta_i[theta_i > 90] = 90; ####  !!!! VERY IMPORTANT !!!! The incident angles above 90 have to be set to 0 to avoid the beam to have an influence
-
-            # Calculate components and irradiance
-            b = np.cos(np.radians(theta_i)) / np.cos(np.radians(theta_z)) 
-            d = (1 + np.cos(np.radians(tilt))) / 2 
-            r = (1 - np.cos(np.radians(tilt))) / 2
-                           
-            R = (albedo * r + b) * beam_prime + (albedo * r + d) * diffuse_prime
-    
-            # Determine orientation and store results
-            df_results[f'gti{azimuth_angles[idx]}_{tilt}'] = R
-    
+    df_results = fct.calculate_GTI_for_orientations(
+        solar_angles, tilt_angles_calc, azimuth_angles_calc, azimuth_angles,
+        beam_prime, diffuse_prime, albedo, theta_z, lat_glob, lon_glob
+    )
+        
     # Set the index to the Timestamp column, filter out negative values and round the values
     df_results.set_index(timestamps, inplace=True)
     df_results = df_results.where(df_results >= 0, np.nan)
@@ -162,18 +147,15 @@ f"\
 # %% CALC GTI with beam and diffuse from Ny-Ålesund
 import pandas as pd
 import numpy as np
-import pvlib
 from datetime import datetime
-import xarray as xr
 import glob_functions_calculation as fct
-from config_path import NYA_DATA_PATH, GLOB_DATA_PATH, GTI_DATA_PATH
+from config_path import NYA_DATA_PATH, GTI_DATA_PATH
 
 # Parameters
 year = 2025; f = 10 #min data frequency
 ############################## File Paths #####################################
 
 bsrn_datafile = NYA_DATA_PATH / "NYA_radiation_2025-all.tab"
-glob_datafile = GLOB_DATA_PATH / "GLOB_data_10min_2025.nc"
 
 output_file = GTI_DATA_PATH / f"{year}_estimation_GTI_{f}min_NYA.csv"
 
@@ -187,10 +169,6 @@ bsrn_data_full = bsrn_data_full.rename_axis('Timestamp')
 bsrn_data_full = bsrn_data_full.resample(f'{f}min').first()
 if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31') 
 bsrn_data_full = bsrn_data_full.loc[start_date:end_date]
-
-glob_ds = xr.open_dataset(glob_datafile)
-albedo_glob = glob_ds['albedo'].to_dataframe()
-albedo_glob.index = albedo_glob.index.tz_localize('UTC')
 
 lat_nya = 78.922700; lon_nya = 11.927300
 
@@ -208,35 +186,18 @@ timestamps = bsrn_data_full.index
 solar_angles = fct.calculate_solar_angles(timestamps, lat_nya, lon_nya)
 theta_z = solar_angles['zenith']; theta_z[theta_z > 80] = np.nan
 I_0 = pvlib.irradiance.get_extra_radiation(timestamps).values
-diffuse_prime, beam_prime = fct.calc_Dprime_Iprime(I_0, theta_z, diffuse, beam)
-albedo_glob = albedo_glob['albedo'].loc[timestamps]
+diffuse_prime, beam_prime = fct.calculate_Dprime_and_Bprime(I_0, theta_z, diffuse, beam)
 
 ### Define the range of tilt and azimuth angles
-tilt_angles = np.arange(0, 181, 5)  
+tilt_angles_calc = np.arange(0, 181, 5)  
 azimuth_angles_calc = np.arange(-180, 180, 15)
 azimuth_angles_names = np.arange(0, 360, 15) 
-# Initialize a list to store results for each timestamp
-# Generate column names
-column_names = [f'gti{orientation}_{tilt}' for orientation in azimuth_angles_names for tilt in tilt_angles]
-df_results = pd.DataFrame(columns=column_names)
 
 # Calculate irradiance for each combination of tilt and azimuth angles
-
-for tilt in tilt_angles:
-    for idx, azimuth in enumerate(azimuth_angles_calc):
-        theta_i = fct.incident_angle(solar_angles, tilt, azimuth, lat_nya, lon_nya)
-        theta_i[theta_i > 90] = 90; ####  !!!! VERY IMPORTANT !!!! The incident angles above 90 have to be set to 0 to avoid the beam to have an influence
-        
-        # Calculate components and irradiance
-        b = np.cos(np.radians(theta_i)) / np.cos(np.radians(theta_z)) 
-        d = (1 + np.cos(np.radians(tilt))) / 2 
-        r = (1 - np.cos(np.radians(tilt))) / 2
-                       
-        R = (albedo * r + b) * beam_prime + (albedo * r + d) * diffuse_prime
-            
-        # Determine orientation and store results
-        df_results[f'gti{azimuth_angles_names[idx]}_{tilt}'] = R
-
+df_results = fct.calculate_GTI_for_orientations(
+    solar_angles, tilt_angles_calc, azimuth_angles_calc, azimuth_angles,
+    beam_prime, diffuse_prime, albedo, theta_z, lat_glob, lon_glob
+)
 # Set the index to the Timestamp column, filter out negative values and round the values
 df_results.set_index(timestamps, inplace=True)
 df_results = df_results.where(df_results >= 0, np.nan)

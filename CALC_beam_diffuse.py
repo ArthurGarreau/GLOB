@@ -52,11 +52,11 @@ pyrano_vars = [
     ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
     ]
 
-pyrano_vars = [
-    ['GHI', 'N_90', 'N_45'],
-    ['GHI', 'E_45', 'W_45'],
-    ['GHI', 'S_45', 'W_45'],
-    ['GHI', 'E_45', 'W_45']]
+# pyrano_vars = [
+#     ['GHI', 'N_90', 'N_45'],
+#     ['GHI', 'E_45', 'W_45'],
+#     ['GHI', 'S_45', 'W_45'],
+#     ['GHI', 'E_45', 'W_45']]
 
 # Load GLOB data
 ds_glob = xr.open_dataset(glob_datafile)
@@ -89,14 +89,12 @@ _{method}_{str(pyrano_var)}pyrano.csv"
             start=f"{date} 00:00:00", end=f"{date} 23:50:00", freq=f'{f}min', tz='UTC')
     
         for timestamp in TIMESTAMPS:
-            glob_value = df_glob_one_day.loc[timestamp]
-            # Calculate the solar position
-            solar_angles = fct.calculate_solar_angles(timestamp, lat_glob, lon_glob)
-    
+            glob_value = df_glob_one_day.loc[timestamp] # data point containing
+            # the GLOB data and solar angles necessary for 'estimate_diffuse_beam_faiman'
+
             # Calculate the estimation based on the least square error method
-            new_result = fct.estimation_diffuse_beam_Faiman(pyrano_var,
-                                                            glob_value,
-                                                            solar_angles,
+            new_result = fct.estimate_diffuse_beam_faiman(pyrano_var,
+                                                            glob_value,                                                        
                                                             lat_glob, lon_glob,
                                                             method=method)
             all_results.append([str(timestamp)] + new_result)

@@ -67,8 +67,6 @@ lat_glob = float(ds_glob.latitude.values); lon_glob = float(ds_glob.longitude.va
 # List to store all results
 all_results = []
 # Create a daily date range for the specified month and year
-if year == 2023: start_date, end_date = (f'{year}-03-14', f'{year}-10-13')
-if year == 2024: start_date, end_date = (f'{year}-04-14', f'{year}-10-13')
 if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31')
 dates = pd.date_range(start=start_date, end=end_date, freq='D')
 # % Beam and Diffuse Irradiance Calculation
@@ -84,14 +82,11 @@ for date in dates:
 
     for timestamp in TIMESTAMPS:
         glob_value = df_glob_one_day.loc[timestamp]
-        # Calculate the solar position
-        solar_angles = fct.calculate_solar_angles(timestamp, lat_glob, lon_glob)
 
         # Calculate the estimation based on the least square error method
         true_estimation = np.array(true_estimations.loc[timestamp])
         new_result = fct.find_best_estimation(combs,
-                                               glob_value,
-                                               solar_angles,
+                                               glob_value,                                               
                                                lat_glob, lon_glob,
                                                true_estimation,
                                                method=method)

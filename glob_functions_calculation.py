@@ -50,17 +50,14 @@ def calculate_solar_angles(timestamps, latitude, longitude, altitude=6, temperat
     Returns:
         pd.DataFrame: Solar position data (zenith, azimuth, declination, etc.).
     """
-    if isinstance(timestamps, pd.core.indexes.datetimes.DatetimeIndex):
-        if len(timestamps) <= 1:
-            raise ValueError(f"Not the correct format of timestamps: {type(timestamps)}")
-        else:
-            if timestamps.tzinfo is None:
-                timestamps = timestamps.tz_localize('UTC')
-            solar_position = pvlib.solarposition.get_solarposition(
-                time=timestamps, latitude=latitude, longitude=longitude, altitude=altitude, temperature=temperature)
-            eot = solar_position['equation_of_time']
-            solar_position['hour_angle'] = pvlib.solarposition.hour_angle(
-                timestamps, longitude, eot)  # timestamps is already a pd.DatetimeIndex
+    if isinstance(timestamps, pd.core.indexes.datetimes.DatetimeIndex | pd._libs.tslibs.timestamps.Timestamp):
+        if timestamps.tzinfo is None:
+            timestamps = timestamps.tz_localize('UTC')
+        solar_position = pvlib.solarposition.get_solarposition(
+            time=timestamps, latitude=latitude, longitude=longitude, altitude=altitude, temperature=temperature)
+        eot = solar_position['equation_of_time']
+        solar_position['hour_angle'] = pvlib.solarposition.hour_angle(
+            timestamps, longitude, eot)  # timestamps is already a pd.DatetimeIndex
     else:
         timestamps = pd.DatetimeIndex(timestamps)
         if timestamps.tzinfo is None:
@@ -79,9 +76,8 @@ def calculate_incident_angle(solar_angles, plane_inclination, plane_azimuth, lat
     Calculate the angle of incidence of the sun for a given plane.
 
     Parameters:
-        solar_angles (pd.DataFrame): DataFrame of solar angles obtained with
-            the function `calculate_solar_angles` (degrees). It requires
-            declination and hour_angle.
+        solar_angles (pd.DataFrame): Dataframe or object of solar angles 
+        requiring 'declination' and 'hour_angle' (degrees).
         plane_inclination (float): Inclination angle of the plane (degrees).
         plane_azimuth (float): Azimuth angle of the plane (degrees).
         latitude (float): Latitude of the location.
@@ -90,8 +86,8 @@ def calculate_incident_angle(solar_angles, plane_inclination, plane_azimuth, lat
     Returns:
         np.ndarray: Angle of incidence (degrees).
     """
-    delta = np.radians(solar_angles['declination'].values)
-    omega = np.radians(solar_angles['hour_angle'].values)
+    delta = np.radians(solar_angles['declination'])
+    omega = np.radians(solar_angles['hour_angle'])
     beta = np.radians(plane_inclination)
     gamma = np.radians(plane_azimuth)
     phi = np.radians(latitude)
@@ -113,8 +109,8 @@ def calculate_beam_coefficient(solar_angles, plane_inclination, plane_azimuth, l
     Calculate the transposition coefficient for beam irradiance.
 
     Parameters:
-        solar_angles (pd.DataFrame): DataFrame of solar angles obtained with
-            the function `calculate_solar_angles` (degrees).
+        solar_angles (pd.DataFrame): Dataframe or object of solar angles 
+        requiring 'zenith', 'declination' and 'hour_angle' (degrees).
         plane_inclination (float): Inclination angle of the plane (degrees).
         plane_azimuth (float): Azimuth angle of the plane (degrees).
         latitude (float): Latitude of the location.
@@ -126,7 +122,7 @@ def calculate_beam_coefficient(solar_angles, plane_inclination, plane_azimuth, l
     theta_i = calculate_incident_angle(solar_angles, plane_inclination, plane_azimuth, latitude, longitude)
     theta_i[theta_i > 90] = 90  # !!! VERY IMPORTANT !!! The incident angles above 90 have to be set to 90 to avoid the beam having an influence
     theta_i = np.radians(theta_i)
-    theta_z = np.radians(solar_angles['zenith'].values)
+    theta_z = np.radians(solar_angles['zenith'])
     beam_coefficient = np.cos(theta_i) / np.cos(theta_z)
     return beam_coefficient
 
@@ -181,14 +177,14 @@ def least_squares_residuals(params, b, d, r, GTI, albedo=None):
         GTI_estim = (b + r * albedo) * y + (d + r * albedo) * x
     return GTI_estim - GTI
 
-def estimate_diffuse_beam_faiman(variables, glob_value, solar_angles, lat, lon, method='linear'):
+def estimate_diffuse_beam_faiman(variables, glob_value, lat, lon, method='linear'):
     """
     Estimate diffuse and beam irradiance based on either linear or nonlinear equations.
 
     Parameters:
         variables (list): List of GLOB plane names.
-        glob_value (pd.DataFrame): Global irradiance values.
-        solar_angles (pd.DataFrame): DataFrame of solar angles.
+        glob_value (pd.DataFrame): Global irradiance and solar angles values
+        obtained from the NetCDF GLOB dataset.
         lat (float): Latitude of the location.
         lon (float): Longitude of the location.
         method (str): Method to use for estimation ('linear' or 'nonlinear').
@@ -196,17 +192,19 @@ def estimate_diffuse_beam_faiman(variables, glob_value, solar_angles, lat, lon, 
     Returns:
         list: Estimated diffuse and beam irradiance, albedo, and error.
     """
-    timestamps = glob_value.name
-    albedo = glob_value['albedo']
+    
     table_azim_incli = create_variable_table(variables)
-    GTI_glob = glob_value[table_azim_incli.index].values
-    # Check if GTI_glob is full of NaNs
-    if np.all(np.isnan(GTI_glob)):
-        return [np.nan, np.nan, np.nan, np.nan, np.nan]
+    GTI_glob = np.asarray(glob_value[table_azim_incli.index], dtype=float)
+
     # Interpolate NaN values in GTI_glob
-    GTI_glob = pd.Series(GTI_glob).interpolate(method='linear').values
     inclinations = table_azim_incli['inclination'].values
     azimuths = table_azim_incli['azimuth'].values
+    
+    # Necessary solar angles for the geometry calculation.
+    # Can also be calculated with the function 'solar_angle_calculation'
+    # if no in the initial dataset.
+    solar_angles = glob_value[['zenith','hour_angle', 'declination']] 
+    
     b = np.array(calculate_beam_coefficient(solar_angles, inclinations, azimuths, lat, lon))
     d = np.array(calculate_diffuse_coefficient(inclinations))
     r = np.array(calculate_reflected_coefficient(inclinations))
@@ -217,6 +215,7 @@ def estimate_diffuse_beam_faiman(variables, glob_value, solar_angles, lat, lon, 
     b, d, r = X[:, 0], X[:, 1], X[:, 2]
     try:
         if method == 'linear':
+            albedo = glob_value['albedo']
             initial_guess = [10, 10]
             # Add bounds if applicable
             bounds = ([0, 0], [np.inf, np.inf])
@@ -242,15 +241,16 @@ def estimate_diffuse_beam_faiman(variables, glob_value, solar_angles, lat, lon, 
             D_prime, B_prime, albedo = results.x
         # Check if the solution is valid
         if not results.success:
+            print("The least squares did not converge.")
             return [np.nan, np.nan, np.nan, np.nan, np.nan]
-    except Exception as e:
-        print(f"An error occurred during optimization: {e}")
+    except Exception:
         return [np.nan, np.nan, np.nan, np.nan, np.nan]
-    zenith = solar_angles['zenith'].values  # degrees
+    
+    zenith = glob_value['zenith']  # degrees
     cos_z = np.cos(np.radians(zenith))
-    I_0 = pvlib.irradiance.get_extra_radiation(timestamps)
+    I_0 = pvlib.irradiance.get_extra_radiation(glob_value.name) # glob_value.name = timestamp
     if not (np.isnan(D_prime) and np.isnan(B_prime)):
-        D, B = solve_for_D_and_B(I_0, cos_z, D_prime, B_prime)
+        D, B = calculate_D_and_B(I_0, cos_z, D_prime, B_prime)
     D = D[0] if np.shape(D) == (1,) and not np.isnan(D[0]) else D
     B = B[0] if np.shape(B) == (1,) and not np.isnan(B[0]) else B
     D_prime = D_prime[0] if np.shape(D_prime) == (1,) and not np.isnan(D_prime[0]) else D_prime
@@ -261,14 +261,16 @@ def estimate_diffuse_beam_faiman(variables, glob_value, solar_angles, lat, lon, 
     else:
         return [np.nan, np.nan, np.nan, np.nan, np.nan]
 
-def estimate_diffuse_beam_monte_carlo(variables, glob_value, solar_angles, lat, lon, n_simulations, error):
+def estimate_diffuse_beam_monte_carlo(variables, glob_value, lat, lon, n_simulations, error):
     """
     Modified estimate_diffuse_beam_faiman function for performing the Monte Carlo calculations.
+    This function is made for calculating the error propagation of the 
+    measurements in the estimations.
 
     Parameters:
         variables (list): List of GLOB plane names.
-        glob_value (pd.DataFrame): Global irradiance values.
-        solar_angles (pd.DataFrame): DataFrame of solar angles.
+        glob_value (pd.DataFrame): Global irradiance and solar angles values
+        obtained from the NetCDF GLOB dataset.
         lat (float): Latitude of the location.
         lon (float): Longitude of the location.
         n_simulations (int): Number of Monte Carlo simulations.
@@ -277,17 +279,17 @@ def estimate_diffuse_beam_monte_carlo(variables, glob_value, solar_angles, lat, 
     Returns:
         tuple: Estimated diffuse and beam irradiance.
     """
-    timestamps = glob_value.name
-    albedo = glob_value['albedo']
     table_azim_incli = create_variable_table(variables)
-    GTI_glob = glob_value[table_azim_incli.index].values
-    # Check if GTI_glob is full of NaNs
-    if np.all(np.isnan(GTI_glob)):
-        return (np.nan, np.nan)
-    # Interpolate NaN values in GTI_glob
-    GTI_glob = pd.Series(GTI_glob).interpolate(method='linear').values
+    GTI_glob = np.asarray(glob_value[table_azim_incli.index], dtype=float)
+   
     inclinations = table_azim_incli['inclination'].values
     azimuths = table_azim_incli['azimuth'].values
+    
+    # Necessary solar angles for the geometry calculation.
+    # Can also be calculated with the function 'solar_angle_calculation'
+    # if no in the initial dataset.
+    solar_angles = glob_value[['zenith','hour_angle', 'declination']] # necessary solar angles for the geometry calculation.
+
     b = np.array(calculate_beam_coefficient(solar_angles, inclinations, azimuths, lat, lon))
     d = np.array(calculate_diffuse_coefficient(inclinations))
     r = np.array(calculate_reflected_coefficient(inclinations))
@@ -301,13 +303,14 @@ def estimate_diffuse_beam_monte_carlo(variables, glob_value, solar_angles, lat, 
         # Monte Carlo simulation
         B_estimates = np.zeros(n_simulations)
         D_estimates = np.zeros(n_simulations)
+        albedo = glob_value['albedo']
 
         for i in range(n_simulations):
             albedo_noisy = albedo * np.random.normal(1, error, size=1)
-
-            initial_guess = [10, 10]
+            initial_guess = [1, 1]
             # Add bounds if applicable
             bounds = ([0, 0], [np.inf, np.inf])
+            
             results = least_squares(
                 least_squares_residuals,
                 initial_guess,
@@ -316,35 +319,35 @@ def estimate_diffuse_beam_monte_carlo(variables, glob_value, solar_angles, lat, 
                 max_nfev=1000  # Increase maximum number of function evaluations
             )
             D_prime, B_prime = results.x
-            zenith = solar_angles['zenith'].values  # degrees
+            zenith = glob_value['zenith']  # degrees
             cos_z = np.cos(np.radians(zenith))
-            I_0 = pvlib.irradiance.get_extra_radiation(timestamps)
+            I_0 = pvlib.irradiance.get_extra_radiation(glob_value.name) # glob_value.name = timestamp
+
             if not (np.isnan(D_prime) and np.isnan(B_prime)):
-                D, B = solve_for_D_and_B(I_0, cos_z, D_prime, B_prime)
+                D, B = calculate_D_and_B(I_0, cos_z, D_prime, B_prime)
                 if D > 1 and D < 1372 and B > 1 and B < 1372:
                     D_estimates[i] = D
-                    B_estimates[i] = B
+                    B_estimates[i] = B        
                 else:
                     D_estimates[i] = np.nan
                     B_estimates[i] = np.nan
-    except Exception as e:
-        print(f"Error calculation")
+                    
+    except Exception:
         return (np.nan, np.nan)
     if zenith < 90:
-        aux = (D_estimates, B_estimates)
-        return aux
+        return (D_estimates, B_estimates)
     else:
         return (np.nan, np.nan)
 
-def find_best_estimation(combs, glob_value, solar_angles, lat, lon, true_estimation, method='linear'):
+def find_best_estimation(combs, glob_value, lat, lon, true_estimation, method='linear'):
     """
     Find the best combination of variables for the least-square estimation of
     beam and diffuse (and albedo) using a parallelization method.
 
     Parameters:
         combs (list): List of variable combinations.
-        glob_value (pd.DataFrame): Global irradiance values.
-        solar_angles (pd.DataFrame): DataFrame of solar angles.
+        glob_value (pd.DataFrame): Global irradiance and solar angles values
+        obtained from the NetCDF GLOB dataset.
         lat (float): Latitude of the location.
         lon (float): Longitude of the location.
         true_estimation (list of lists): List of measured [diffuse, beam].
@@ -355,7 +358,7 @@ def find_best_estimation(combs, glob_value, solar_angles, lat, lon, true_estimat
     # Evaluate all combinations in parallel
     results = np.array(
         Parallel(n_jobs=-1)(delayed(estimate_diffuse_beam_faiman)(
-            list(comb), glob_value, solar_angles, lat, lon, method
+            list(comb), glob_value, lat, lon, method
         ) for comb in combs)
     )
 
@@ -377,30 +380,8 @@ def find_best_estimation(combs, glob_value, solar_angles, lat, lon, true_estimat
 
         return [np.round(D), np.round(B), np.round(albedo, 2), np.round(D_prime), np.round(B_prime), comb_opt]
 
-def create_variable_table(variables):
-    """
-    Create a table mapping GLOB planes to their azimuth and inclination.
 
-    Parameters:
-        variables (list): List of GLOB plane names.
-
-    Returns:
-        pd.DataFrame: Table with azimuth and inclination for each plane.
-    """
-    azimuth_mapping = {
-        'S': 0, 'SW': 45, 'W': 90, 'NW': 135,
-        'N': 180, 'NE': -135, 'E': -90, 'SE': -45
-    }
-    table = pd.DataFrame(columns=["azimuth", "inclination"])
-    for var in variables:
-        if var == 'GHI':
-            table.loc[var] = [0, 0]
-        else:
-            direction, beta = var.split('_')
-            table.loc[var] = [azimuth_mapping[direction], int(beta)]
-    return table
-
-def solve_for_D_and_B(I_0, cos_z, D_prime, B_prime):
+def calculate_D_and_B(I_0, cos_z, D_prime, B_prime):
     """
     Solve for D and B using the quadratic equation.
     See equation 1.11 (Appendix A) in Faiman et al., (1987).
@@ -437,7 +418,7 @@ def solve_for_D_and_B(I_0, cos_z, D_prime, B_prime):
             D, B = np.nan, np.nan
     return D, B
 
-def calculate_D_prime_I_prime(I_0, zenith, D, I):
+def calculate_Dprime_and_Bprime(I_0, zenith, D, I):
     """
     Calculate D' and I' from D and I using the provided formulas.
     See equation 1.9 (Appendix A) in Faiman et al., (1987).
@@ -457,6 +438,62 @@ def calculate_D_prime_I_prime(I_0, zenith, D, I):
     # Calculate D' using the formula
     D_prime = (I_0 - I * cos_z) * D / I_0
     return D_prime, I_prime
+
+def calculate_GTI_for_orientations(
+    solar_angles, tilt_angles, azimuth_angles_calc, azimuth_angles_names,
+    beam_prime, diffuse_prime, albedo, theta_z, lat, lon):
+    """
+    Calculate Global Tilted Irradiance for each combination of tilt and azimuth angles.
+
+    Parameters:
+    -----------
+    solar_angles : DataFrame
+        Solar angles containing zenith, azimuth, hour_angle, and delcination.
+    tilt_angles : array-like
+        Array of tilt angles.
+    azimuth_angles_calc : array-like
+        Array of azimuth angles for calculation.
+    azimuth_angles_names : array-like
+        Array of azimuth angles for column naming.
+    beam_prime : array-like
+        Beam irradiance values.
+    diffuse_prime : array-like
+        Diffuse irradiance values.
+    albedo : array-like
+        Albedo values.
+    theta_z : array-like
+        Zenith angles.
+    lat : float
+        Latitude of the location.
+    lon : float
+        Longitude of the location.
+
+    Returns:
+    -------
+    df_results : DataFrame
+        DataFrame with irradiance for each tilt and azimuth combination.
+    """
+    # Initialize a list to store results for each timestamp
+    column_names = [f'gti{orientation}_{tilt}' for orientation in azimuth_angles_names for tilt in tilt_angles]
+    df_results = pd.DataFrame(columns=column_names)
+
+    for tilt in tilt_angles:
+        for idx, azimuth in enumerate(azimuth_angles_calc):
+            # Calculate incident angle
+            theta_i = calculate_incident_angle(solar_angles, tilt, azimuth, lat, lon)
+            theta_i[theta_i > 90] = 90
+
+            # Calculate components and irradiance
+            b = np.cos(np.radians(theta_i)) / np.cos(np.radians(theta_z))
+            d = (1 + np.cos(np.radians(tilt))) / 2
+            r = (1 - np.cos(np.radians(tilt))) / 2
+
+            R = (albedo * r + b) * beam_prime + (albedo * r + d) * diffuse_prime
+
+            # Store results
+            df_results[f'gti{azimuth_angles_names[idx]}_{tilt}'] = R
+
+    return df_results
 
 def azimuth_to_orientation(azimuth):
     """
@@ -604,3 +641,26 @@ def create_gti_estimation_label(validation_pyrano):
         azimuth = direction_to_azimuth[direction]
         gti_estimation_label[item] = f'gti{azimuth}_{tilt}'
     return gti_estimation_label
+
+def create_variable_table(variables):
+    """
+    Create a table mapping GLOB planes to their azimuth and inclination.
+
+    Parameters:
+        variables (list): List of GLOB plane names.
+
+    Returns:
+        pd.DataFrame: Table with azimuth and inclination for each plane.
+    """
+    azimuth_mapping = {
+        'S': 0, 'SW': 45, 'W': 90, 'NW': 135,
+        'N': 180, 'NE': -135, 'E': -90, 'SE': -45
+    }
+    table = pd.DataFrame(columns=["azimuth", "inclination"])
+    for var in variables:
+        if var == 'GHI':
+            table.loc[var] = [0, 0]
+        else:
+            direction, beta = var.split('_')
+            table.loc[var] = [azimuth_mapping[direction], int(beta)]
+    return table

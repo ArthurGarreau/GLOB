@@ -123,7 +123,6 @@ results_df.to_excel(output_file, sheet_name='Sheet1', index=False)
 print(f"Error metrics saved to {output_file}")
 
 
-"""
 # %% Metrics for NYÅ estimations of GTI
 
 import pandas as pd
@@ -152,7 +151,7 @@ validation_pyrano = [
     'SW_45', 'SW_90', 'SW_135', 'NW_45', 'NW_90', 'NW_135'
 ]
 
-GTI_estimation_label = fct.create_GTI_estimation_label(validation_pyrano)
+GTI_estimation_label = fct.create_gti_estimation_label(validation_pyrano)
 
 # Load the data
 glob_data = xr.open_dataset(glob_datafile).to_dataframe()
@@ -212,5 +211,5 @@ with open(output_file, 'w') as file:
 
 results_df.to_excel(output_file, sheet_name='Sheet1', index=False)
 print(f"Error metrics saved to {output_file}")
-"""
+
 

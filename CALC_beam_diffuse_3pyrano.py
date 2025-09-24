@@ -73,13 +73,10 @@ for pyrano_var in pyrano_vars:
     
         for timestamp in TIMESTAMPS:
             glob_value = df_glob_one_day.loc[timestamp]
-            # Calculate the solar position
-            solar_angles = fct.calculate_solar_angles(timestamp, lat_glob, lon_glob)
-    
+
             # Calculate the estimation based on the least square error method
-            new_result = fct.estimation_diffuse_beam_Faiman(pyrano_var,
-                                                            glob_value,
-                                                            solar_angles,
+            new_result = fct.estimate_diffuse_beam_faiman(pyrano_var,
+                                                            glob_value,                                                            
                                                             lat_glob, lon_glob,
                                                             method=method)
             all_results.append([str(timestamp)] + new_result)

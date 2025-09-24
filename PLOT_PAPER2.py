@@ -51,7 +51,7 @@ LOW_RES_PLOT_PATH, ALL_PLOT_PATH, GLOB_DATA_PATH, NYA_DATA_PATH
 # --- Global Parameters ---
 method = 'nonlinear'  # Default method for irradiance decomposition
 f = 10  # Data frequency in minutes
-pyrano_nr = 25  # Number of pyranometers used in estimations
+pyrano_nr = 5  # Number of pyranometers used in estimations
 
 ###############################################################################
 # --- File Paths ---
@@ -63,8 +63,9 @@ gti_nya_datafile = GTI_DATA_PATH / \
 B_D_estimations_datafile = B_D_DATA_PATH / \
     f"2025_estimation_beam_diffuse_{f}min_{method}_{pyrano_nr}pyrano.csv"
 bsrn_datafile = NYA_DATA_PATH / "NYA_radiation_2025-all.tab"
+glob_data_file = GLOB_DATA_PATH / "GLOB_data_10min_2023-24.nc"
 
-# %% Fig 4: Beam and diffuse daily evolution
+# %% Fig 5: Beam and diffuse daily evolution
 # -----------------------------------------
 # This section plots the daily evolution of beam and diffuse irradiance components
 # for a specific date, comparing BSRN reference data with GLOB estimations and model predictions
@@ -164,13 +165,13 @@ ax2.annotate(date_str, xy=(0.90, -0.15), xycoords='axes fraction')
 plt.tight_layout()
 
 # Save the plot
-plt.savefig(ALL_PLOT_PATH / f"Beam_Diffuse_{date_str}_{pyrano_nr}pyrano_{method}.png.png", dpi=300, bbox_inches='tight')
-plt.savefig(LOW_RES_PLOT_PATH / "Figure 4.png", dpi=300, bbox_inches='tight')
-plt.savefig(HIGH_RES_PLOT_PATH / "Figure 4.pdf", format='pdf', bbox_inches='tight')
+# plt.savefig(ALL_PLOT_PATH / f"Beam_Diffuse_{date_str}_{pyrano_nr}pyrano_{method}.png.png", dpi=300, bbox_inches='tight')
+plt.savefig(LOW_RES_PLOT_PATH / "Figure 5.png", dpi=300, bbox_inches='tight')
+# plt.savefig(HIGH_RES_PLOT_PATH / "Figure 5.pdf", format='pdf', bbox_inches='tight')
 # Optionally show the plot
 plt.close()
 
-# %% Fig 5-6: Combined polar heatmap of GTI - Monthly average of incoming and reflected GTI
+# %% Fig 6-7: Combined polar heatmap of GTI - Monthly average of incoming and reflected GTI
 # --------------------------------------------------------------------------------
 # This section creates polar heatmaps showing monthly averages of GTI for sky-facing and ground-facing planes
 # for the period from March to September in 2023-2024
@@ -182,14 +183,19 @@ gti_data = gti_data[~gti_data.index.duplicated(keep='first')]
 # Define the monthly date ranges for 2023 and 2024
 year = "2023-24"
 monthly_date_ranges = [
-    pd.date_range(start=f'2023-{month:02d}-01',
-                  end=f'2023-{month:02d}-{pd.Timestamp(f"{year}-{month:02d}-01").days_in_month}',
-                  freq='10min').union(pd.date_range(start=f'2024-{month:02d}-01',
-                  end=f'2024-{month:02d}-{pd.Timestamp(f"{year}-{month:02d}-01").days_in_month}',
-                  freq='10min'))
-    for month in range(4, 10) # from March to September
+    pd.date_range(
+        start=f'2023-{month:02d}-01',
+        end=f'2023-{month:02d}-{pd.Timestamp(f"2023-{month:02d}-01").days_in_month}',
+        freq='10min'
+    ).union(
+        pd.date_range(
+            start=f'2024-{month:02d}-01',
+            end=f'2024-{month:02d}-{pd.Timestamp(f"2024-{month:02d}-01").days_in_month}',
+            freq='10min'
+        )
+    )
+    for month in range(4, 10)  # April to September (4=April, 9=September)
 ]
-
 # Define the azimuth orientations and their corresponding angles in degrees
 azimuth_orientations = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N']
 azimuth_angles = np.array([0, 45, 90, 135, 180, 225, 270, 315, 360])
@@ -267,12 +273,12 @@ for idx, title in enumerate(titles):
     plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
     # Save the combined plot
-    fig.savefig(ALL_PLOT_PATH / f"monthly_avg_polar_heatmap_{names[idx]}_{year}.png", dpi=300, bbox_inches='tight')
+    # fig.savefig(ALL_PLOT_PATH / f"monthly_avg_polar_heatmap_{names[idx]}_{year}.png", dpi=300, bbox_inches='tight')
     fig.savefig(LOW_RES_PLOT_PATH / f"Figure {6+idx}.png", dpi=300, bbox_inches='tight')
-    fig.savefig(HIGH_RES_PLOT_PATH / f"Figure {6+idx}.pdf", format='pdf', bbox_inches='tight')
+    # fig.savefig(HIGH_RES_PLOT_PATH / f"Figure {6+idx}.pdf", format='pdf', bbox_inches='tight')
     # plt.close()
 
-# %% Fig 7-8: Average GTI in 2023-24 on monofacial and bifacial
+# %% Fig 8-9: Average GTI in 2023-24 on monofacial and bifacial
 # -----------------------------------------------------------
 # This section creates polar heatmaps showing annual averages of GTI for monofacial and bifacial configurations
 
@@ -350,13 +356,18 @@ plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
 # Save and show the monthly plot
 fig.savefig(ALL_PLOT_PATH / "annual_avg_polar_heatmap_GLOB_estim_2023-24.png", dpi=300, bbox_inches='tight')
-fig.savefig(LOW_RES_PLOT_PATH / "Figure 7.png", dpi=300, bbox_inches='tight')
-fig.savefig(HIGH_RES_PLOT_PATH / "Figure 7.pdf", format='pdf', bbox_inches='tight')
+fig.savefig(LOW_RES_PLOT_PATH / "Figure 8.png", dpi=300, bbox_inches='tight')
+fig.savefig(HIGH_RES_PLOT_PATH / "Figure 8.pdf", format='pdf', bbox_inches='tight')
 # plt.close()
 
-# %% Fig 9: GTI measured with GLOB
+# %% Fig 9: GTI measured with GLOB (must run Fig 8 before)
 # -------------------------------
 # This section creates polar heatmaps showing annual averages of GTI based on actual GLOB measurements
+
+# Create the date ranges
+dates_2023 = pd.date_range('2023-04-01', '2023-09-30', freq='10min')
+dates_2024 = pd.date_range('2024-04-01', '2024-09-30', freq='10min')
+date_range = dates_2023.union(dates_2024); date_range = date_range.tz_localize('UTC')
 
 # --- Load Data ---
 ds_glob = xr.open_dataset(glob_data_file)
@@ -364,8 +375,8 @@ df_glob = ds_glob.to_dataframe(); df_glob.index = df_glob.index.tz_localize('UTC
 df_glob = df_glob.reindex(date_range, fill_value=pd.NA)
 # We mask the glob values with the same NaN mask as in the estimations data
 # to perform the averaging on the same data.
-mask = df_estim['gti0_45'].isna()
-df_glob = df_glob[~mask]
+# mask = df_estim['gti0_45'].isna()
+# df_glob = df_glob[~mask]
 
 # Define azimuth orientations and angles
 azimuth_orientations = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW','N']
@@ -436,9 +447,9 @@ cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
 # Save the plot
-fig.savefig(ALL_PLOT_PATH / "annual_avg_polar_heatmap_GLOB_meas_2023-24.png", dpi=300, bbox_inches='tight')
-fig.savefig(LOW_RES_PLOT_PATH / "Figure 8.png", dpi=300, bbox_inches='tight')
-fig.savefig(HIGH_RES_PLOT_PATH / "Figure 8.pdf", format='pdf', bbox_inches='tight')
+# fig.savefig(ALL_PLOT_PATH / "annual_avg_polar_heatmap_GLOB_meas_2023-24.png", dpi=300, bbox_inches='tight')
+fig.savefig(LOW_RES_PLOT_PATH / "Figure 9.png", dpi=300, bbox_inches='tight')
+# fig.savefig(HIGH_RES_PLOT_PATH / "Figure 9.pdf", format='pdf', bbox_inches='tight')
 # plt.close()
 
 # %% Fig 10: Most used pyranometers for estimations with a combination of 3
@@ -564,7 +575,7 @@ cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
 
 # Adjust layout to prevent overlap
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
-fig.savefig(ALL_PLOT_PATH / "Most_used_pyrano3.png", dpi=300, bbox_inches='tight')
+# fig.savefig(ALL_PLOT_PATH / "Most_used_pyrano3.png", dpi=300, bbox_inches='tight')
 fig.savefig(LOW_RES_PLOT_PATH / "Figure 10.png", dpi=300, bbox_inches='tight')
-fig.savefig(HIGH_RES_PLOT_PATH / "Figure 10.pdf", format='pdf', bbox_inches='tight')
+# fig.savefig(HIGH_RES_PLOT_PATH / "Figure 10.pdf", format='pdf', bbox_inches='tight')
 plt.close()

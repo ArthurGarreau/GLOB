@@ -52,7 +52,7 @@ pyrano_vars = [['GHI', 'N_45', 'E_45', 'S_45', 'W_45'],
 #      'S_45', 'S_90', 'S_135', 'W_45', 'W_90', 'W_135']]
 ############################## File Paths #####################################
 
-glob_datafile = GLOB_DATA_PATH / f"GLOB_data_{f}min_{year}.nc"
+glob_datafile = GLOB_DATA_PATH / f"GLOB_data_{f}min_2023-24.nc"
 
 output_file_path = B_D_DATA_PATH
 
@@ -80,17 +80,14 @@ for pyrano_var in pyrano_vars:
     
         # Loop over each minute in the day
         TIMESTAMPS = pd.date_range(
-            start=f"{date} 6:00:00", end=f"{date} 20:00:00", freq=f'1h', tz='UTC')
+            start=f"{date} 6:00:00", end=f"{date} 20:00:00", freq='1h', tz='UTC')
     
         for timestamp in TIMESTAMPS:
             glob_value = df_glob_one_day.loc[timestamp]
-            # Calculate the solar position
-            solar_angles = fct.calculate_solar_angles(timestamp, lat_glob, lon_glob)
-            
+
             # Calculate the estimation based on the least square error method
-            D_MC, B_MC = fct.estimation_diffuse_beam_MonteCarlo(pyrano_var,
-                                                            glob_value,
-                                                            solar_angles,
+            D_MC, B_MC = fct.estimate_diffuse_beam_monte_carlo(pyrano_var,
+                                                            glob_value,                                                            
                                                             lat_glob, lon_glob,
                                                             n_simulations, error)
             

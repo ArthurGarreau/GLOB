@@ -1,15 +1,15 @@
-# GLOB: Multiface Solar Irradiance Analysis Toolkit
+# GLOB: Multi-Pyranometer Array for Beam, Diffuse and GTI estimations 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
-**GLOB** is a Python-based toolkit for analyzing solar irradiance data from a 26-pyranometer array (Apogee SP-110), designed for Arctic environments. This project is part of my PhD research at The University Centre in Svalbard, funded by The Arctic Field Grant (Grant nr. xxx).
+**GLOB** is a Python-based toolkit for analyzing solar irradiance data from a 26-pyranometer array (Apogee SP-110) deployed in Svalbard. This project is part of my PhD research at The University Centre in Svalbard, funded by RCN through the Arctic Field Grant (Grant nr. 940094, RiS ID 12666).
 
 ---
 
 ## Table of Contents
 - [Features](#features)
 - [Pyranometer Orientations](#pyranometer-orientations)
-- [Scripts](#scripts)
+- [Scripts description](#scripts)
 - [Data Workflow](#data-workflow)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -66,12 +66,10 @@ The following table describes the **variable names in the NetCDF data files** fo
 
 ---
 
-## Scripts
+## Scripts description
 
 ### **0. Path Scripts**
 - **`config_path.py`**: Central configuration file containing all file paths. Must be modified to match your system. Running this script creates all necessary project folders:
-  ```bash
-  python config_path.py
 
 ### **1. Data Preprocessing**
 - **`DATA_GLOB_csvdata.py`**
@@ -115,6 +113,13 @@ The following table describes the **variable names in the NetCDF data files** fo
 
 ## Data Workflow
 
+### 0. Change the paths 
+   In `config_path.py`, the path need to be adapted to your working directory:
+   - SCRIPT_PATH corresponds to the Python scripts location
+   - DATA_PATH corresponds to the location of the data usefull for the estimations. The data can be downloaded on the GitHub repository.
+   - PLOT_PATH corresponds to the export location of the necessary plots.
+   Running `config_path.py`, creates automatically all the necessary folders
+
 ### 1.1 Use Preprocessed Data (Recommended)
   Preprocessed NetCDF data files are available for download from the **Arctic Data Centre** (link will be added soon). If you use these files, you can **skip the data preprocessing step** and directly proceed to irradiance estimation.
 
@@ -123,11 +128,11 @@ The following table describes the **variable names in the NetCDF data files** fo
    *(Note: This step is only necessary if you have raw CSV data.)*
 
 ### 2. Estimation
-   Use `CALC_GTI.py`, `CALC_beam_diffuse*.py` to estimate GTI, beam, and diffuse irradiance from NetCDF data.
-   *(~1 hour/month for full-year data.)*
+   Use `CALC_beam_diffuse*.py` THEN `CALC_GTI.py` to estimate GTI, beam, and diffuse irradiance from NetCDF data.
+   *(~20 min/month of estimation)*
 
 ### 3. Error Analysis
-   Run `CALC_beam_diffuse_error_propagation.py` for uncertainty quantification.
+   Run `CALC_metrics_beam_diffuse.py` and `CALC_metrics_GTI.py` for uncertainty quantification.
 
 ### 4. Visualization
    Use `PLOT_PAPER2.py` to visualize results.
@@ -143,3 +148,10 @@ The following table describes the **variable names in the NetCDF data files** fo
 
 2. **Adapt the paths**
   Modify the path in the script "config_path.py" and run it to create the necessary folders.
+  ```bash
+  python config_path.py
+
+3. **Install Python libraries**
+Install the required libraries to run the codes:
+```bash
+pip install -r requirements.txt
