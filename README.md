@@ -8,7 +8,7 @@
 
 ## Table of Contents
 - [Features](#features)
-- [Pyranometer Orientations](#pyranometer-orientations)
+- [GLOB data description](#glob-data-description)
 - [Scripts description](#scripts)
 - [Data Workflow](#data-workflow)
 - [Installation](#installation)
@@ -29,7 +29,7 @@
 
 ---
 
-## Pyranometer Orientations
+## GLOB data description
 
 The following table describes the **variable names in the NetCDF data files** for GLOB measurements, along with their azimuth and tilt angles.
 
@@ -113,8 +113,8 @@ The following table describes the **variable names in the NetCDF data files** fo
 
 ## Data Workflow
 
-### 0. Change the paths 
-   In `config_path.py`, the path need to be adapted to your working directory:
+### 0. Change the path names 
+   In `config_path.py`, the paths need to be adapted to your working directory:
    - SCRIPT_PATH corresponds to the Python scripts location
    - DATA_PATH corresponds to the location of the data usefull for the estimations. The data can be downloaded on the GitHub repository.
    - PLOT_PATH corresponds to the export location of the necessary plots.
@@ -152,6 +152,6 @@ The following table describes the **variable names in the NetCDF data files** fo
   python config_path.py
 
 3. **Install Python libraries**
-Install the required libraries to run the codes:
-```bash
-pip install -r requirements.txt
+  Install the required libraries to run the codes:
+  ```bash
+  pip install -r requirements.txt
