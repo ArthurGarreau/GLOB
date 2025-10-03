@@ -12,8 +12,6 @@
 - [Scripts description](#scripts)
 - [Data Workflow](#data-workflow)
 - [Installation](#installation)
-- [Usage](#usage)
-- [Outputs](#outputs)
 - [License](#license)
 - [Contact](#contact)
 
@@ -155,3 +153,19 @@ The following table describes the **variable names in the NetCDF data files** fo
   Install the required libraries to run the codes:
   ```bash
   pip install -r requirements.txt
+
+  ---
+## License
+This project is licensed under the **MIT License**—a permissive open-source license that allows for free use, modification, and distribution, provided that the original copyright notice and license terms are included in all copies or substantial portions of the software.
+
+For the full license text, see the [LICENSE.md](LICENSE.md) file in this repository.
+---
+## Contact
+For questions, feedback, or collaboration opportunities, please reach out to:
+
+**Arthur Garreau**
+PhD Researcher
+The University Centre in Svalbard (UNIS)
+- Professional email: [arthurg@unis.no](mailto\:arthurg@unis.no)
+- Personal email: [arthur.garreau4@gmail.com](mailto\:arthur.garreau4@gmail.com)
+---
