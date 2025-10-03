@@ -14,13 +14,6 @@ Key Features:
 - Handles albedo data and calculates average albedo and MBE for nonlinear methods.
 - Outputs results to an Excel file for further analysis.
 
-Dependencies:
--------------
-- pandas
-- numpy
-- pvlib
-- config_path (custom module for file paths)
-
 Author: Arthur Garreau
 Contact: arthurg@unis.no
 Date: May 30, 2025

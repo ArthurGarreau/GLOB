@@ -16,14 +16,6 @@ Key Features:
 - Performs cross-validation by removing specific orientations and comparing estimations.
 - Outputs results to Excel files for further analysis.
 
-Dependencies:
--------------
-- pandas
-- xarray
-- numpy
-- config_path (custom module for file paths)
-- glob_functions_calculation (custom module for utility functions)
-
 Author: Arthur Garreau
 Contact: arthurg@unis.no
 Date: May 30, 2025

@@ -12,13 +12,6 @@ Key Features:
 - Estimates beam and diffuse irradiance for each timestamp with 3 pyranometers.
 - Calculate the metric of beam and diffuse estimations for the year 2025.
 
-Dependencies:
--------------
-- xarray
-- pandas
-- datetime
-- Custom module: glob_functions_calculation
-
 Author: Arthur Garreau
 Contact: arthurg@unis.no
 Date: May 30, 2025

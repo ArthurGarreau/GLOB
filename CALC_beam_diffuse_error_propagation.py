@@ -14,15 +14,6 @@ Key Features:
 - Uses a Monte Carlo approach to calculate 1000 times beam and diffuse with 
   the model and output the error due to the input noise.
   
-Dependencies:
--------------
-- xarray
-- pandas
-- numpy
-- scipy.stats
-- datetime
-- Custom module: glob_functions_calculation
-
 Author: Arthur Garreau
 Contact: arthurg@unis.no
 Date: July 29, 2024

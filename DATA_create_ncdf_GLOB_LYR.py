@@ -6,12 +6,13 @@ GLOB Data Processing and NetCDF Conversion Script
 This script processes GLOB data from a CSV file, calculates solar angles, computes surface albedo,
 and converts the data into a NetCDF file format.
 
-Dependencies:
+Key Features:
 -------------
-- pandas
-- xarray
-- numpy
-- pathlib
+- Reads and preprocesses GLOB data from a CSV file.
+- Calculates solar angles (zenith, elevation, azimuth, hour angle, declination) using pvlib.
+- Computes surface albedo and filters valid values.
+- Adds latitude and longitude information to the NetCDF file.
+- Saves the processed data as a NetCDF file with appropriate metadata.
 
 Author: Arthur Garreau
 Contact: arthurg@unis.no
@@ -21,7 +22,7 @@ Date: November 1, 2024
 import pandas as pd
 import xarray as xr
 import numpy as np
-from config_path import DATA_PATH
+from config_path import DATA_PATH, GLOB_DATA_PATH
 import glob_functions_calculation as fct
 
 # %% ---- Function Definitions ---- #
@@ -186,7 +187,7 @@ def spectral_correction(ds, h=0.01):
     'hour_angle': ds['hour_angle'].values
 })
         
-            theta_i = fct.incident_angle(solar_angles, inclinations, azimuths, lat, lon)
+            theta_i = fct.calculate_incident_angle(solar_angles, inclinations, azimuths, lat, lon)
             theta_i[theta_i > 90] = 90; ####  !!!! VERY IMPORTANT !!!!
             # Calculate absolute air mass (AM_a)
             AM_a = np.exp(-0.0001184 * h) * (np.cos(np.radians(theta_i)) + 0.5057 * (96.080 - theta_i)**(-1.634))**(-1)
@@ -273,22 +274,32 @@ def save_to_netcdf(ds, output_file):
 
 
 # %% ---- Process Data for each year ---- #
+
+file_KZ = DATA_PATH.parent / "Irradiance_ncdf" / \
+"Adventdalen_global_horizontal_irradiances_LW_SW_all.nc"
 latitude = 78.200318; longitude = 15.840308 # Adventdalen
-file_KZ = DATA_PATH.parent / "Irradiance_ncdf" / "Adventdalen_global_horizontal_irradiances_LW_SW_all.nc"
-f = 10  # minute
+f = .5  # minute
 
 ds_all=[]
 # Read and preprocess data for each year
 for year in [2023, 2024]:
-    file_path = DATA_PATH / f"GLOB_data_30sec_{year}.dat"
-    df = read_and_preprocess_data(file_path)
-    df.index = pd.to_datetime(df.index)
-    # Resample to f-minute intervals and compute the mean centered on the averaging period
-    # df.index = df.index + pd.Timedelta(minutes=f/2)
-    # df = df.resample(f'{f}min').mean()
-    ds = convert_to_xarray_with_metadata(df)
-    ds_all.append(ds)
-    print(year, " read and preprocessed")
+    # Resample to f-minute intervals 
+    if f >= 1: 
+        file_path = GLOB_DATA_PATH / f"GLOB_data_{f}min_{year}.dat"; freq = f'{f} minutes'
+        output_file = GLOB_DATA_PATH / f"GLOB_data_{f}min_2023-24.nc"
+        df = read_and_preprocess_data(file_path)
+        df.index = df.index + pd.Timedelta(minutes=f/2)
+        df = df.resample(f'{f}min').mean()
+        ds = convert_to_xarray_with_metadata(df)
+        ds_all.append(ds)
+    else: 
+        file_path = GLOB_DATA_PATH / f"GLOB_data_{int(f*60)}sec_{year}.dat"
+        output_file = GLOB_DATA_PATH / f"GLOB_data_{int(f*60)}sec_2023-24.nc"
+        freq = f'{int(f*60)} seconds'
+        df = read_and_preprocess_data(file_path)
+        ds = convert_to_xarray_with_metadata(df)
+        ds_all.append(ds)
+    print(year, "read and preprocessed")
 
 # Merge datasets for 2023 and 2024
 merged_ds = xr.merge(ds_all)
@@ -300,42 +311,47 @@ merged_ds = compute_and_filter_albedo(merged_ds, ds_kZ)
 merged_ds = spectral_correction(merged_ds)
 
 merged_ds = add_global_attributes(
-    ds=merged_ds,
-    title= 'Tilted irradiance measurements on 25 orientations with GLOB in Adventdalen (2023-24)',
-    summary='This file includes a time series of global tilted irradiance (GTI) measurements every 30 seconds, from 2023 to 2024 in the valley of Adventdalen, Svalbard. '
-'Each GTI components is labeled with the format "azimuth_tilt". '
-'The measurements consist of solar irradiance recorded with Apogee SP-110 pyranometers. '
-'The pyranometers are mounted in a shape of a rhombicuboctahedron called "GLOB". '
-'We included the solar angles associated to each timestamp, calculated with pvlib.',
-    keywords='GCMDSK: EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC RADIATION > SHORTWAVE RADIATION, '
-'GCMDLOC: GEOGRAPHIC REGION > POLAR, GCMDLOC: CONTINENT > EUROPE > NORTHERN EUROPE > SCANDINAVIA > NORWAY',
-    geospatial_lat_min='78.200318',
-    geospatial_lat_max='78.200318',
-    geospatial_lon_min='15.840308',
-    geospatial_lon_max='15.840308',
-    time_coverage_start='2023-02-23',
-    time_coverage_end='2024-10-14',
-    history='- We created the file using netCDF4 in Python.\n'
-'- We applied the spectral filter for silicon cell pyranometer data detailed in Balthazar et al. (2015)',
-    comments='The albedo component was retrieved from the Kipp an Zonen CNR1 instrument 100m away from GLOB.',
-    date_created= '2025-09-18',
-    creator_type='person, person, person',
-    creator_institution='The University Centre in Svalbard, The University Centre in Svalbard, The University Centre in Svalbard',
-    creator_name='Arthur Garreau, Aleksey Shestov, Sebastian Sikora',
-    creator_url='https://orcid.org/0000-0001-9509-1061, https://orcid.org/0000-0001-9601-8958, https://orcid.org/0009-0004-1874-7126',
-    creator_email='arthurg@unis.no, alekseys@unis.no, guliksen@gmail.com',
-    institution='The University Centre in Svalbard',
-    license='https://creativecommons.org/licenses/by/4.0/ (CC-BY-4.0)',
-    iso_topic_category='climatologyMeteorologyAtmosphere',
-    publisher_name='Arctic Data Centre',
-    publisher_institution='Norwegian Meteorological Institute',
-    publisher_url='https://adc.met.no',
-    publisher_email='adc-support@met.no',
-    station_name='GLOB Adventdalen',
-    instrument_type='Apogee Silicon Cell SP-110',
+ds=merged_ds,
+title= 'Global tilted irradiance on 25 faces measured in Adventdalen (2023-24)',
+summary=f'This file includes a time series of global tilted irradiance (GTI) \
+measurements every {freq}, from 2023 to 2024 in the valley of Adventdalen, Svalbard.\n\
+The measurements were acquired with a 25-pyranometer array called GLOB, mounted \
+in the shape of rhombicuboctahedron. They consist of solar irradiance recorded \
+with Apogee SP-110 pyranometers.\n\
+Each GTI components is labeled with the format "azimuth_tilt". We also included \
+the solar angles associated to each timestamp, calculated with pvlib.',
+keywords='GCMDSK: EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC RADIATION > SHORTWAVE RADIATION, '
+'GCMDLOC: GEOGRAPHIC REGION > POLAR, \
+GCMDLOC: CONTINENT > EUROPE > NORTHERN EUROPE > SCANDINAVIA > NORWAY',
+geospatial_lat_min='78.200318',
+geospatial_lat_max='78.200318',
+geospatial_lon_min='15.840308',
+geospatial_lon_max='15.840308',
+time_coverage_start='2023-02-23',
+time_coverage_end='2024-10-14',
+history='- We created the file using netCDF4 in Python.\n'
+'- We applied the spectral filter for silicon cell pyranometer data detailed in \
+Balthazar et al. (2015)',
+comments='The albedo component was retrieved from the Kipp an Zonen CNR1 instrument \
+100m away from GLOB.',
+date_created= '2025-09-18',
+creator_type='person, person, person',
+creator_institution='The University Centre in Svalbard, \
+The University Centre in Svalbard, The University Centre in Svalbard',
+creator_name='Arthur Garreau, Aleksey Shestov, Sebastian Sikora',
+creator_url='https://orcid.org/0000-0001-9509-1061, \
+https://orcid.org/0000-0001-9601-8958, https://orcid.org/0009-0004-1874-7126',
+creator_email='arthurg@unis.no, alekseys@unis.no, guliksen@gmail.com',
+institution='The University Centre in Svalbard',
+license='https://creativecommons.org/licenses/by/4.0/ (CC-BY-4.0)',
+iso_topic_category='climatologyMeteorologyAtmosphere',
+publisher_name='Arctic Data Centre',
+publisher_institution='Norwegian Meteorological Institute',
+publisher_url='https://adc.met.no',
+publisher_email='adc-support@met.no',
+station_name='GLOB Adventdalen',
+instrument_type='Apogee SP-110'
 )
 
-
-output_file = DATA_PATH / f"GLOB_data_30sec_2023-24.nc"
 save_to_netcdf(merged_ds, output_file)
 ds.close(); ds_kZ.close(); merged_ds.close()

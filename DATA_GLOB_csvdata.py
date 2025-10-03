@@ -18,10 +18,6 @@ Key Features:
 - Ensures data consistency by standardizing column names and time intervals.
 - Preserves important metadata from the original data files.
 
-Dependencies:
--------------
-- pandas
-- pathlib
 
 Author: Arthur Garreau
 Contact: arthurg@unis.no

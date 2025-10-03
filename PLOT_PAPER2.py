@@ -21,16 +21,6 @@ Figures Generated:
 4. Figure 8: Annual average GTI for monofacial and bifacial configurations (measured)
 5. Figure 10: Heatmaps of most used pyranometer combinations by time of day
 
-Dependencies:
--------------
-- numpy
-- pandas
-- matplotlib
-- xarray
-- pvlib
-- glob_functions_calculation (custom module)
-- config_path (custom module for path management)
-
 Author: Arthur Garreau
 Contact: arthurg@unis.no
 Date: April 25, 2025
@@ -175,6 +165,7 @@ plt.close()
 # --------------------------------------------------------------------------------
 # This section creates polar heatmaps showing monthly averages of GTI for sky-facing and ground-facing planes
 # for the period from March to September in 2023-2024
+# Moreover, this code enables saving the data from the plot in a .csv file.
 
 # --- Load GTI Data ---
 gti_data = pd.read_csv(gti_estimation_datafile, sep='\t', parse_dates=True, index_col='Timestamp', header=10)
@@ -196,35 +187,45 @@ monthly_date_ranges = [
     )
     for month in range(4, 10)  # April to September (4=April, 9=September)
 ]
+
 # Define the azimuth orientations and their corresponding angles in degrees
 azimuth_orientations = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N']
 azimuth_angles = np.array([0, 45, 90, 135, 180, 225, 270, 315, 360])
-# Define the inclination angles
+
+# Define the inclination angles and titles
 titles = [f"Sky-facing planes ({year})", f"Ground-facing planes ({year})"]
-names = ["skyfacing","groundfacing"]
+names = ["skyfacing", "groundfacing"]
+
+# Initialize a list to store monthly irradiance matrices for CSV export
+monthly_matrices = {name: [] for name in names}
 
 for idx, title in enumerate(titles):
-    if idx==0: inclination_angles = np.arange(0, 100, 10) # incoming solar light
-    if idx==1: inclination_angles = np.arange(90, 180, 10) # reflected solar light
+    if idx == 0:
+        inclination_angles = np.arange(0, 90, 5)  # incoming solar light
+    if idx == 1:
+        inclination_angles = np.arange(90, 185, 5)  # reflected solar light
 
     # Initialize a grid to accumulate irradiance values for monthly averages
     theta, r = np.meshgrid(np.deg2rad(azimuth_angles), inclination_angles)
+
     # Create a 3x3 grid for the plots
     fig = plt.figure(figsize=(14, 8))
     gs = GridSpec(2, 4, figure=fig, width_ratios=[1, 1, 1, 0.1])  # Allocate space for the colorbar
-    subgrid_count = [0,1,2,4,5,6]
+    subgrid_count = [0, 1, 2, 4, 5, 6]
+
     # Initialize a list to store the contourf objects
     contourf_objects = []
+
     # Loop through each month's date range
     for idx_month, monthly_date_range in enumerate(monthly_date_ranges):
         # Determine the subplot position
         ax = fig.add_subplot(gs[subgrid_count[idx_month]], projection='polar')
-
         monthly_date_range = monthly_date_range.tz_localize('UTC')
         df_estim = gti_data.reindex(monthly_date_range)
 
-        # Initialize a grid to accumulate irradiance values for the annual average
+        # Initialize a grid to accumulate irradiance values for the monthly average
         irradiance_avg = np.zeros((len(inclination_angles), len(azimuth_angles)), dtype=float)
+
         # Get the current month
         current_month = monthly_date_range[0].month
 
@@ -235,15 +236,25 @@ for idx, title in enumerate(titles):
                 if var_name in df_estim.columns:
                     irradiance_avg[i, j] = np.nanmean(df_estim[var_name])
 
-            # Duplicate first column to last for continuity
-            irradiance_avg[:, -1] = irradiance_avg[:, 0]
+        # Duplicate first column to last for continuity
+        irradiance_avg[:, -1] = irradiance_avg[:, 0]
+
+        # Store the irradiance matrix for CSV export
+        irradiance_df = pd.DataFrame(irradiance_avg, index=inclination_angles, columns=azimuth_orientations)
+        irradiance_df.index.name = 'Tilt'
+        irradiance_df.columns.name = 'Azimuth'
+        irradiance_df = irradiance_df.stack().reset_index()
+        irradiance_df['Month'] = calendar.month_name[current_month]
+        irradiance_df['Case'] = names[idx]
+        irradiance_df = irradiance_df.rename(columns={0: 'Irradiance'})
+        monthly_matrices[names[idx]].append(irradiance_df)
 
         # Plot with improved color scaling
         vmax = np.nanmax(irradiance_avg)
         contour = ax.contourf(theta, r, irradiance_avg, cmap='gnuplot2', levels=np.arange(0, 340, 10), alpha=1)
         contourf_objects.append(contour)
         contour_lines = ax.contour(theta, r, irradiance_avg, colors='white',
-                                   linewidths=0.8, levels=[100,150,200,240,250,260], zorder=1)
+                                   linewidths=0.8, levels=[100, 150, 200, 240, 250, 260], zorder=1)
         ax.clabel(contour_lines, inline_spacing=0.1, fontsize=9, fmt='%1.0f')
 
         # Add colorbar and formatting
@@ -251,32 +262,44 @@ for idx, title in enumerate(titles):
         ax.set_xticklabels(azimuth_orientations, fontsize=12)
         ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)
-        ax.set_yticks(inclination_angles)
-        ax.set_yticklabels(inclination_angles, fontsize=12)
+        ax.set_yticks(inclination_angles[::2])
+        ax.set_yticklabels(inclination_angles[::2], fontsize=12)
         ax.set_rlabel_position(150)
         ax.spines['polar'].set_color('black')
         ax.tick_params(axis='both', colors='black')
         ax.text(np.radians(150), inclination_angles[-1]+10, "Tilt angle (°)")
-        ax.set_title(f'{calendar.month_name[current_month]}', fontsize=12, fontweight= "bold")
+        ax.set_title(f'{calendar.month_name[current_month]}', fontsize=12, fontweight="bold")
 
     # Add a single colorbar to the figure
     vmin = min([co.get_array().min() for co in contourf_objects])
     vmax = max([co.get_array().max() for co in contourf_objects])
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
-
     cbar_ax = fig.add_subplot(gs[0:2, 3])
     cbar = fig.colorbar(contour, cax=cbar_ax)
     cbar.set_ticks(np.arange(0, 360, 30))
-    fig.text(0.02, 0.96, title, fontsize = 16, fontweight= "bold", bbox=dict(facecolor='k', alpha=0.2))
-    cbar.set_label(label='Irradiance [$W \ m^{-2}$]', size=14)  # Adjust the size as needed
-    cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
+    fig.text(0.02, 0.96, title, fontsize=16, fontweight="bold", bbox=dict(facecolor='k', alpha=0.2))
+    cbar.set_label(label='Irradiance [$W \ m^{-2}$]', size=14)
+    cbar.ax.tick_params(labelsize=12)
     plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
-    # Save the combined plot
+    # Save the combined plot (uncomment if needed)
     # fig.savefig(ALL_PLOT_PATH / f"monthly_avg_polar_heatmap_{names[idx]}_{year}.png", dpi=300, bbox_inches='tight')
-    fig.savefig(LOW_RES_PLOT_PATH / f"Figure {6+idx}.png", dpi=300, bbox_inches='tight')
+    # fig.savefig(LOW_RES_PLOT_PATH / f"Figure {6+idx}.png", dpi=300, bbox_inches='tight')
     # fig.savefig(HIGH_RES_PLOT_PATH / f"Figure {6+idx}.pdf", format='pdf', bbox_inches='tight')
     # plt.close()
+
+# Combine all monthly matrices into a single DataFrame and save to CSV
+all_months_df = pd.concat([pd.concat(monthly_matrices['skyfacing']), pd.concat(monthly_matrices['groundfacing'])])
+all_months_pivot = all_months_df.pivot_table(
+    index=['Month', 'Tilt', 'Case'],
+    columns='Azimuth',
+    values='Irradiance'
+).reset_index()
+
+# Round the irradiance values to 2 decimal places
+all_months_pivot = all_months_pivot.round()
+# Save to CSV
+all_months_pivot.to_csv(HIGH_RES_PLOT_PATH / 'Figure 6-7.csv', sep='\t',index=False)
 
 # %% Fig 8-9: Average GTI in 2023-24 on monofacial and bifacial
 # -----------------------------------------------------------

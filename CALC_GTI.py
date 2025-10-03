@@ -15,15 +15,6 @@ Key Features:
 - Calculates the irradiance using the beam and diffuse components of solar radiation.
 - Saves the results to CSV files with a detailed header including metadata.
 
-Dependencies:
--------------
-- numpy
-- pandas
-- datetime
-- re
-- pvlib
-- Custom module: glob_functions_calculation
-
 Author: Arthur Garreau
 Date: April 24, 2025
 """

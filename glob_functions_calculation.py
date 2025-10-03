@@ -15,15 +15,6 @@ Key Features:
 - Provides geometry coefficients for beam, diffuse, and reflected irradiance.
 - Utilizes parallel processing for efficient computation of irradiance estimations.
 
-Dependencies:
--------------
-- numpy
-- pvlib
-- pandas
-- scipy
-- joblib
-- re
-
 Author: Arthur Garreau
 Contact: arthurg@unis.no
 Date: November 6, 2024

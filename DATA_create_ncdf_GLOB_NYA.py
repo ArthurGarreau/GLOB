@@ -11,16 +11,8 @@ Key Features:
 - Reads and preprocesses GLOB data from a CSV file.
 - Calculates solar angles (zenith, elevation, azimuth, hour angle, declination) using pvlib.
 - Computes surface albedo and filters valid values.
-- Resamples the data to 5-minute intervals.
 - Adds latitude and longitude information to the NetCDF file.
 - Saves the processed data as a NetCDF file with appropriate metadata.
-
-Dependencies:
--------------
-- pandas
-- xarray
-- numpy
-- pathlib
 
 Author: Arthur Garreau
 Contact: arthurg@unis.no
@@ -30,7 +22,7 @@ Date: November 1, 2024
 import pandas as pd
 import xarray as xr
 import numpy as np
-from config_path import DATA_PATH
+from config_path import DATA_PATH, GLOB_DATA_PATH, NYA_DATA_PATH
 import glob_functions_calculation as fct
 
 
@@ -195,7 +187,7 @@ def spectral_correction(ds, h=0.01):
                 'hour_angle': ds['hour_angle'].values
             })
         
-            theta_i = fct.incident_angle(solar_angles, inclinations, azimuths, lat, lon)
+            theta_i = fct.calculate_incident_angle(solar_angles, inclinations, azimuths, lat, lon)
             theta_i[theta_i > 90] = 90; ####  !!!! VERY IMPORTANT !!!!
             # Calculate absolute air mass (AM_a)
             AM_a = np.exp(-0.0001184 * h) * (np.cos(np.radians(theta_i)) + 0.5057 * (96.080 - theta_i)**(-1.634))**(-1)
@@ -302,25 +294,25 @@ def add_global_attributes(ds, **kwargs):
     return ds
 
 # %% ---- Process Data ---- #
-glob_file_2025 = DATA_PATH / "GLOB_data_30sec_2025_NYA.dat"
-bsrn_file_2025 = DATA_PATH.parent / "Irradiance" / "NYA" / "NYA_radiation_2025-all.tab"
-f = int(float(input("Please enter the data frequency required in minutes: "))) #minute
+glob_file_2025 = GLOB_DATA_PATH / "GLOB_data_30sec_2025_NYA.dat"
+bsrn_file_2025 = NYA_DATA_PATH / "NYA_radiation_2025-all.tab"
 latitude=78.92240; longitude=11.92174 # Ny-Ålesund
+f = .5 # minute
 
-# Load glob data
+# Load data
 df = read_and_preprocess_data(glob_file_2025)
-# Load the BSRN data
 df_bsrn = pd.read_csv(bsrn_file_2025, sep='\t', skiprows=24, parse_dates=['Date/Time'], index_col='Date/Time')
 
 # Resample to f-minute intervals 
-if f > 1: # minute
+if f > 1: 
+    freq = f'{f} minutes'
     df.index = df.index + pd.Timedelta(minutes=f/2)
     df = df.resample(f'{f}min').mean()
-    
     df_bsrn = df_bsrn.resample(f'{f}min').first()
-    freq = f'{f} minutes'
+    output_file = GLOB_DATA_PATH / f"GLOB_data_{f}min_2025.nc"
 else: 
     freq = '30 seconds'
+    output_file = GLOB_DATA_PATH / "GLOB_data_30sec_2025.nc"
 
 df_bsrn.index = df_bsrn.index.tz_localize('UTC')
 
@@ -332,46 +324,49 @@ ds = compute_and_filter_albedo(ds)
 ds = spectral_correction(ds)
 
 ds = add_global_attributes(
-    ds=ds,
-    title= 'Tilted irradiance measurements on 25 orientations with GLOB in Ny-Ålesund (2025)',
-    summary='This file includes a time series of global tilted irradiance (GTI) measurements every {freq}, in 2025 in Ny-Ålesund '
-'Each GTI components is labeled with the format "azimuth_tilt". '
-'The measurements consist of solar irradiance recorded with Apogee SP-110 pyranometers. '
-'The pyranometers are mounted in a shape of a rhombicuboctahedron called "GLOB". '
-'We included the solar angles associated to each timestamp, calculated with pvlib.',
-    keywords='GCMDSK: EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC RADIATION > SHORTWAVE RADIATION, '
-'GCMDLOC: GEOGRAPHIC REGION > POLAR, GCMDLOC: CONTINENT > EUROPE > NORTHERN EUROPE > SCANDINAVIA > NORWAY',
-    geospatial_lat_min='78.92240',
-    geospatial_lat_max='78.92240',
-    geospatial_lon_min='11.92174',
-    geospatial_lon_max='11.92174',
-    time_coverage_start='2025-03-15',
-    time_coverage_end='2025-09-05',
-    history='- We created the file using netCDF4 in Python.\n'
-'- We applied the spectral filter for silicon cell pyranometer data detailed in Balthazar et al. (2015)',
-    comments='The albedo component was calculated with two Apogee from GLOB up and down. '
-'But between 2025-05-09 and 2025-08-22 the ground GHI sensor fell, therefor we took albedo measurment from the BSRN station nearby using Kipp and Zonen instruments.',
-    date_created= '2025-09-18',
-    creator_type='person, person, person',
-    creator_institution='The University Centre in Svalbard, The University Centre in Svalbard, The University Centre in Svalbard',
-    creator_name='Arthur Garreau, Aleksey Shestov, Sebastian Sikora',
-    creator_url='https://orcid.org/0000-0001-9509-1061, https://orcid.org/0000-0001-9601-8958, https://orcid.org/0009-0004-1874-7126',
-    creator_email='arthurg@unis.no, alekseys@unis.no, guliksen@gmail.com',
-    institution='The University Centre in Svalbard',
-    license='https://creativecommons.org/licenses/by/4.0/ (CC-BY-4.0)',
-    iso_topic_category='climatologyMeteorologyAtmosphere',
-    publisher_name='Arctic Data Centre',
-    publisher_institution='Norwegian Meteorological Institute',
-    publisher_url='https://adc.met.no',
-    publisher_email='adc-support@met.no',
-    station_name='GLOB Ny-Ålesund',
-    instrument_type='Apogee Silicon Cell SP-110',
+ds=ds,
+title= 'Global tilted irradiance on 25 faces measured in Ny-Ålesund (2025)',
+summary=f'This file includes a time series of global tilted irradiance (GTI) \
+measurements every {freq}, in 2025 in Ny-Ålesund.\n\
+The measurements were acquired with a 25-pyranometer array called GLOB, mounted \
+in the shape of rhombicuboctahedron. They consist of solar irradiance recorded \
+with Apogee SP-110 pyranometers.\n\
+Each GTI components is labeled with the format "azimuth_tilt". We also included \
+the solar angles associated to each timestamp, calculated with pvlib.',
+keywords='GCMDSK: EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC RADIATION > SHORTWAVE RADIATION, '
+'GCMDLOC: GEOGRAPHIC REGION > POLAR, \
+GCMDLOC: CONTINENT > EUROPE > NORTHERN EUROPE > SCANDINAVIA > NORWAY',
+geospatial_lat_min='78.92240',
+geospatial_lat_max='78.92240',
+geospatial_lon_min='11.92174',
+geospatial_lon_max='11.92174',
+time_coverage_start='2025-03-15',
+time_coverage_end='2025-09-05',
+history='- We created the file using netCDF4 in Python.\n'
+'- We applied the spectral filter for silicon cell pyranometer data detailed in \
+Balthazar et al. (2015).',
+comments='The albedo component was calculated with two upward and downward Apogee \
+pyranometers from GLOB. But, between 2025-05-09 and 2025-08-22 the ground GHI \
+sensor fell, and we used the albedo measurement from the BSRN station nearby instead.',
+date_created= '2025-09-18',
+creator_type='person, person, person',
+creator_institution='The University Centre in Svalbard, \
+The University Centre in Svalbard, The University Centre in Svalbard',
+creator_name='Arthur Garreau, Aleksey Shestov, Sebastian Sikora',
+creator_url='https://orcid.org/0000-0001-9509-1061, \
+https://orcid.org/0000-0001-9601-8958, https://orcid.org/0009-0004-1874-7126',
+creator_email='arthurg@unis.no, alekseys@unis.no, guliksen@gmail.com',
+institution='The University Centre in Svalbard',
+license='https://creativecommons.org/licenses/by/4.0/ (CC-BY-4.0)',
+iso_topic_category='climatologyMeteorologyAtmosphere',
+publisher_name='Arctic Data Centre',
+publisher_institution='Norwegian Meteorological Institute',
+publisher_url='https://adc.met.no',
+publisher_email='adc-support@met.no',
+station_name='GLOB Ny-Ålesund',
+instrument_type='Apogee SP-110'
 )
-
-if f>1: 
-    output_file = DATA_PATH / f"GLOB_data_{f}min_2025.nc"
-else: 
-    output_file = DATA_PATH / "GLOB_data_30sec_2025.nc"
+   
 save_to_netcdf(ds, output_file)
 
 # Print variables in the dataset

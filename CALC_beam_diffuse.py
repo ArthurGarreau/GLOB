@@ -13,13 +13,6 @@ Key Features:
 - Estimates beam and diffuse irradiance for each timestamp.
 - Calculate the metric of beam and diffuse estimations for the year 2025.
 
-Dependencies:
--------------
-- xarray
-- pandas
-- datetime
-- Custom module: glob_functions_calculation
-
 Author: Arthur Garreau
 Contact: arthurg@unis.no
 Date: November 22, 2024

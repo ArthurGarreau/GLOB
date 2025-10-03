@@ -12,14 +12,6 @@ Key Features:
 - Find the best 3 pyranometers set up to estimate beam and diffuse irradiance
   each timestamp.
 
-Dependencies:
--------------
-- xarray
-- pandas
-- numpy
-- datetime
-- Custom module: glob_functions_calculation
-
 Author: Arthur Garreau
 Contact: arthurg@unis.no
 Date: November 22, 2024
