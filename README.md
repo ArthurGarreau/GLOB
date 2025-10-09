@@ -140,21 +140,21 @@ The following table describes the **variable names in the NetCDF data files** fo
 ## Installation
 
 1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/ArthurGarreau/GLOB.git
-   cd GLOB
-
+	```bash
+	git clone https://github.com/ArthurGarreau/GLOB.git
+	cd GLOB
+	```
 2. **Adapt the paths**
-  Modify the path in the script "config_path.py" and run it to create the necessary folders.
-  ```bash
-  python config_path.py
-
+	Modify the path in the script "config_path.py" and run it to create the necessary folders.
+	```bash
+	python config_path.py
+	```
 3. **Install Python libraries**
-  Install the required libraries to run the codes:
-  ```bash
-  pip install -r requirements.txt
-
-  ---
+	Install the required libraries to run the codes:
+	```bash
+	pip install -r requirements.txt
+	```
+---
 ## License
 This project is licensed under the **MIT License**—a permissive open-source license that allows for free use, modification, and distribution, provided that the original copyright notice and license terms are included in all copies or substantial portions of the software.
 
