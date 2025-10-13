@@ -19,20 +19,17 @@ Date: November 22, 2024
 """
 
 # %% Load Libraries
-import xarray as xr
 import pandas as pd
 from datetime import datetime
-from config_path import B_D_DATA_PATH, GLOB_DATA_PATH
+from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
-method = 'nonlinear'; year = 2025; f = 10 #min data frequency
+method = 'linear'; year = 2025; f = 10 #min data frequency
 
 ############################## File Paths #####################################
+glob_datafile = DATA_PATH / "GLOB_data" / f"GLOB_data_{f}min_{year}.nc"
 
-glob_datafile = GLOB_DATA_PATH / f"GLOB_data_{f}min_{year}.nc"
-
-output_file_path = B_D_DATA_PATH
-
+output_file_path = DATA_PATH / "Estim_Beam_Diffuse"
 ###############################################################################
 
 pyrano_vars = [
@@ -52,7 +49,7 @@ pyrano_vars = [
 #     ['GHI', 'E_45', 'W_45']]
 
 # Load GLOB data
-ds_glob = xr.open_dataset(glob_datafile)
+ds_glob = fct.read_netcdf(glob_datafile)
 lat_glob = float(ds_glob.latitude.values); lon_glob = float(ds_glob.longitude.values)
 
 # List to store all results
@@ -64,12 +61,15 @@ if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31')
 dates = pd.date_range(start=start_date, end=end_date, freq='D')
 
 for pyrano_var in pyrano_vars:
-
-    output_file = output_file_path / f"{year}_estimation_beam_diffuse_{f}min\
+############################## File Paths #####################################
+    if len(pyrano_var)>3:
+        output_file = output_file_path / f"{year}_estimation_beam_diffuse_{f}min\
 _{method}_{len(pyrano_var)}pyrano.csv"
-    output_file = output_file_path / f"{year}_estimation_beam_diffuse_{f}min\
+    else:
+        output_file = output_file_path / f"{year}_estimation_beam_diffuse_{f}min\
 _{method}_{str(pyrano_var)}pyrano.csv"
-    
+###############################################################################    
+
     # % Beam and Diffuse Irradiance Calculation
     for date in dates:
         date = date.strftime('%Y-%m-%d')
@@ -83,13 +83,15 @@ _{method}_{str(pyrano_var)}pyrano.csv"
     
         for timestamp in TIMESTAMPS:
             glob_value = df_glob_one_day.loc[timestamp] # data point containing
+            glob_value = glob_value.apply(pd.to_numeric, errors='coerce')
             # the GLOB data and solar angles necessary for 'estimate_diffuse_beam_faiman'
+            solar_angles = fct.calculate_solar_angles(timestamp, lat_glob, lon_glob)
 
             # Calculate the estimation based on the least square error method
-            new_result = fct.estimate_diffuse_beam_faiman(pyrano_var,
-                                                            glob_value,                                                        
-                                                            lat_glob, lon_glob,
-                                                            method=method)
+            new_result = fct.estimate_diffuse_beam(pyrano_var,
+                                                   glob_value,                                                        
+                                                   lat_glob, lon_glob,
+                                                   method=method)
             all_results.append([str(timestamp)] + new_result)
         print(date)
     
@@ -127,14 +129,14 @@ f"\
     ds_glob.close()
 
 # % Execute the error script.-
-if year == 2025:
-    # Path to the script you want to run
-    script_path = 'CALC_metrics_beam_diffuse.py'
-    # Read the script file
-    with open(script_path, 'r') as file:
-        script_code = file.read()
-    # Execute the script
-    exec(script_code)
+# if year == 2025:
+#     # Path to the script you want to run
+#     script_path = 'CALC_metrics_beam_diffuse.py'
+#     # Read the script file
+#     with open(script_path, 'r') as file:
+#         script_code = file.read()
+#     # Execute the script
+#     exec(script_code)
     
 
 

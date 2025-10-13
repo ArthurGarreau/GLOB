@@ -22,7 +22,7 @@ Date: November 1, 2024
 import pandas as pd
 import xarray as xr
 import numpy as np
-from config_path import DATA_PATH, GLOB_DATA_PATH
+from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
 # %% ---- Function Definitions ---- #
@@ -153,54 +153,6 @@ def compute_and_filter_albedo(ds, ds_kZ):
 
     return ds
 
-def spectral_correction(ds, h=0.01):
-    """
-    Apply spectral correction to the silicon cell pyranometer data as explained in Balthazar et al. (2015).
-
-    Parameters:
-        - ds: xarray Dataset containing the data.
-        - h: Height above sea level in km (default is 0.01).
-
-    Returns:
-        - xarray Dataset with corrected components.
-    """
-    
-    timestamps_ds = ds['Timestamp']; timestamps_ds = pd.DatetimeIndex(timestamps_ds)
-    lat = float(ds.latitude.values); lon = float(ds.longitude.values)
-
-    # List of components to correct
-    components = ['GHI', 'S_45', 'S_90', 'S_135', 'SW_45', 'SW_90', 'SW_135',
-                  'W_45', 'W_90', 'W_135', 'NW_45', 'NW_90', 'NW_135', 'N_45',
-                  'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45', 'E_90',
-                  'E_135', 'SE_45', 'SE_90', 'SE_135']
-
-    # Apply the correction to each component
-    for component in components:
-        if component in ds:
-
-            table_azim_incli = fct.create_variable_table([component])
-            inclinations = table_azim_incli['inclination'].values
-            azimuths = table_azim_incli['azimuth'].values
-
-            solar_angles = pd.DataFrame({
-    'declination': ds['declination'].values,
-    'hour_angle': ds['hour_angle'].values
-})
-        
-            theta_i = fct.calculate_incident_angle(solar_angles, inclinations, azimuths, lat, lon)
-            theta_i[theta_i > 90] = 90; ####  !!!! VERY IMPORTANT !!!!
-            # Calculate absolute air mass (AM_a)
-            AM_a = np.exp(-0.0001184 * h) * (np.cos(np.radians(theta_i)) + 0.5057 * (96.080 - theta_i)**(-1.634))**(-1)
-
-            # Calculate f1
-            f1 = 0.000263 * (AM_a)**3 - 0.00632 * (AM_a)**2 + 0.054 * (AM_a) + 0.932
-
-            # Calculate f2
-            f2 = -0.00000004504 * theta_i**3 - 0.00001357 * theta_i**2 + 0.0006074 * theta_i + 1
-            
-            ds[f'{component}'] = ds[component] / (f1 * f2)
-
-    return ds
 
 def add_global_attributes(ds, **kwargs):
     """
@@ -275,8 +227,7 @@ def save_to_netcdf(ds, output_file):
 
 # %% ---- Process Data for each year ---- #
 
-file_KZ = DATA_PATH.parent / "Irradiance_ncdf" / \
-"Adventdalen_global_horizontal_irradiances_LW_SW_all.nc"
+file_KZ = DATA_PATH / "Adventdalen_global_horizontal_irradiances_LW_SW_all.nc"
 latitude = 78.200318; longitude = 15.840308 # Adventdalen
 f = .5  # minute
 
@@ -285,16 +236,16 @@ ds_all=[]
 for year in [2023, 2024]:
     # Resample to f-minute intervals 
     if f >= 1: 
-        file_path = GLOB_DATA_PATH / f"GLOB_data_{f}min_{year}.dat"; freq = f'{f} minutes'
-        output_file = GLOB_DATA_PATH / f"GLOB_data_{f}min_2023-24.nc"
+        file_path = DATA_PATH / "GLOB_data" / f"GLOB_data_{f}min_{year}.dat"; freq = f'{f} minutes'
+        output_file =  DATA_PATH / "GLOB_data" / f"GLOB_data_{f}min_2023-24.nc"
         df = read_and_preprocess_data(file_path)
         df.index = df.index + pd.Timedelta(minutes=f/2)
         df = df.resample(f'{f}min').mean()
         ds = convert_to_xarray_with_metadata(df)
         ds_all.append(ds)
     else: 
-        file_path = GLOB_DATA_PATH / f"GLOB_data_{int(f*60)}sec_{year}.dat"
-        output_file = GLOB_DATA_PATH / f"GLOB_data_{int(f*60)}sec_2023-24.nc"
+        file_path =  DATA_PATH / "GLOB_data" / f"GLOB_data_{int(f*60)}sec_{year}.dat"
+        output_file =  DATA_PATH / "GLOB_data" / f"GLOB_data_{int(f*60)}sec_2023-24.nc"
         freq = f'{int(f*60)} seconds'
         df = read_and_preprocess_data(file_path)
         ds = convert_to_xarray_with_metadata(df)
@@ -308,16 +259,15 @@ merged_ds = xr.merge(ds_all)
 ds_kZ = xr.open_dataset(file_KZ)
 merged_ds = add_solar_angles_and_coordinates(merged_ds, fct, latitude, longitude)
 merged_ds = compute_and_filter_albedo(merged_ds, ds_kZ)
-merged_ds = spectral_correction(merged_ds)
 
 merged_ds = add_global_attributes(
 ds=merged_ds,
-title= 'Global tilted irradiance on 25 faces measured in Adventdalen (2023-24)',
+title= 'Global tilted irradiance on 25 planes measured in Adventdalen (2023-24)',
 summary=f'This file includes a time series of global tilted irradiance (GTI) \
 measurements every {freq}, from 2023 to 2024 in the valley of Adventdalen, Svalbard.\n\
 The measurements were acquired with a 25-pyranometer array called GLOB, mounted \
 in the shape of rhombicuboctahedron. They consist of solar irradiance recorded \
-with Apogee SP-110 pyranometers.\n\
+with Apogee SP-110 pyranometers on 25 different planes.\n\
 Each GTI components is labeled with the format "azimuth_tilt". We also included \
 the solar angles associated to each timestamp, calculated with pvlib.',
 keywords='GCMDSK: EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC RADIATION > SHORTWAVE RADIATION, '
@@ -329,9 +279,7 @@ geospatial_lon_min='15.840308',
 geospatial_lon_max='15.840308',
 time_coverage_start='2023-02-23',
 time_coverage_end='2024-10-14',
-history='- We created the file using netCDF4 in Python.\n'
-'- We applied the spectral filter for silicon cell pyranometer data detailed in \
-Balthazar et al. (2015)',
+history='- We created the file using netCDF4 in Python.',
 comments='The albedo component was retrieved from the Kipp an Zonen CNR1 instrument \
 100m away from GLOB.',
 date_created= '2025-09-18',
@@ -355,3 +303,4 @@ instrument_type='Apogee SP-110'
 
 save_to_netcdf(merged_ds, output_file)
 ds.close(); ds_kZ.close(); merged_ds.close()
+

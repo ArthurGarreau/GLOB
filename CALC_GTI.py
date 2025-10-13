@@ -24,7 +24,7 @@ import pandas as pd
 import pvlib
 from datetime import datetime
 import re
-from config_path import B_D_DATA_PATH, GTI_DATA_PATH
+from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
 method = 'linear'; year = 2025; f = 10 #min data frequency
@@ -38,8 +38,12 @@ pyrano_vars = [
     ['GHI', 'N_45', 'N_90', 'E_45', 'E_90', 'S_45', 'S_90', 'W_45', 'W_90'],
     ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
     ]
-# pyrano_vars = [['GHI', 'N_90', 'N_45']]
-# pyrano_vars = [['GHI', 'E_45', 'N_45']]
+
+# pyrano_vars = [
+#     ['GHI', 'N_90', 'N_45'],
+#     ['GHI', 'E_45', 'W_45'],
+#     ['GHI', 'S_45', 'W_45'],
+#     ['GHI', 'E_45', 'W_45']] 
 
 
 ### Define the date range with timezone-aware datetime objects
@@ -56,14 +60,12 @@ for pyrano_var in pyrano_vars:
     if len(pyrano_var)==3: pyrano_var_name = pyrano_var
     else: pyrano_var_name = len(pyrano_var)
         
-    ############################## File Paths #####################################
-    
-    input_filename = B_D_DATA_PATH / \
+############################## File Paths #####################################
+    input_filename = DATA_PATH / "Estim_Beam_Diffuse" / \
         f"{year}_estimation_beam_diffuse_{f}min_{method}_{pyrano_var_name}pyrano.csv"
-    output_file =  GTI_DATA_PATH / \
+    output_file =  DATA_PATH / "Estim_GTI" / \
         f"{year}_estimation_GTI_{f}min_{method}_{pyrano_var_name}pyrano.csv"
-    
-    ###############################################################################
+###############################################################################
     
     # Load and filter data
     glob_estim_data = pd.read_csv(input_filename,parse_dates=['Timestamp'],index_col='Timestamp',
@@ -122,8 +124,6 @@ f"\
 #\n\
 # [UTC]\t[W m-2]\n"
     
-    
-    GTI_DATA_PATH.mkdir(parents=True, exist_ok=True)
     # Open the file and write the header and units
     with open(output_file, 'w', encoding='utf-8') as file:
         file.write(header)
@@ -140,16 +140,14 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import glob_functions_calculation as fct
-from config_path import NYA_DATA_PATH, GTI_DATA_PATH
+from config_path import DATA_PATH
 
 # Parameters
 year = 2025; f = 10 #min data frequency
 ############################## File Paths #####################################
+bsrn_datafile = DATA_PATH / "NYA_BSRN_data" / "NYA_radiation_2025-all.tab"
 
-bsrn_datafile = NYA_DATA_PATH / "NYA_radiation_2025-all.tab"
-
-output_file = GTI_DATA_PATH / f"{year}_estimation_GTI_{f}min_NYA.csv"
-
+output_file = DATA_PATH / "Estim_GTI" / f"{year}_estimation_GTI_{f}min_NYA.csv"
 ###############################################################################
 
 # Load the BSRN data
@@ -212,9 +210,6 @@ estimation for a specific tilt and azimuth, denoted as gti.azimuth_tilt.\n\
 #\n\
 #\n\
 # [UTC]\t[W m-2]\n"
-
-# Create the folder if it doesn't exist already
-GTI_DATA_PATH.mkdir(parents=True, exist_ok=True)
 
 # Open the file and write the header and units
 with open(output_file, 'w', encoding='utf-8') as file:

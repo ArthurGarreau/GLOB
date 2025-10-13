@@ -25,7 +25,7 @@ import pandas as pd
 import numpy as np
 import scipy.stats as stats
 from datetime import datetime
-from config_path import B_D_DATA_PATH, GLOB_DATA_PATH
+from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
 ### Modified function for performing Monte Carlo calculation
@@ -39,14 +39,10 @@ pyrano_vars = [['GHI', 'N_45', 'E_45', 'S_45', 'W_45'],
                ['GHI', 'N_45', 'N_90', 'N_135', 'E_45', 'E_90', 'E_135',
                 'S_45', 'S_90', 'S_135', 'W_45', 'W_90', 'W_135']]
 
-# pyrano_vars = [['GHI', 'N_45', 'N_90', 'N_135', 'E_45', 'E_90', 'E_135',
-#      'S_45', 'S_90', 'S_135', 'W_45', 'W_90', 'W_135']]
 ############################## File Paths #####################################
+glob_datafile = DATA_PATH / "GLOB_data"  / f"GLOB_data_{f}min_2023-24.nc"
 
-glob_datafile = GLOB_DATA_PATH / f"GLOB_data_{f}min_2023-24.nc"
-
-output_file_path = B_D_DATA_PATH
-
+output_file_path = DATA_PATH / "Estim_Beam_Diffuse" 
 ###############################################################################
 
 for pyrano_var in pyrano_vars:
@@ -54,7 +50,7 @@ for pyrano_var in pyrano_vars:
     output_file = output_file_path / f"{year}_MCestimation_beam_diffuse_{method}_{len(pyrano_var)}pyrano_noiseAlbedo_error_{error}.csv"
     
     # Load GLOB data
-    ds_glob = xr.open_dataset(glob_datafile)
+    ds_glob = fct.read_netcdf(glob_datafile)
     lat_glob = float(ds_glob.latitude.values); lon_glob = float(ds_glob.longitude.values)
     
     # List to store all results

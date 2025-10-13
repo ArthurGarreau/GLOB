@@ -3,8 +3,9 @@
 Solar Angle and Irradiance Calculation Functions
 ================================================
 This script provides a collection of functions for calculating solar angles, irradiance components,
-and geometry coefficients. The beam and diffuse estimation are based on the method described in Faiman et al. (1987).
-Faiman, D., Zemel, A., & Zangvil, A. (1987). A method for monitoring insolation
+and geometry coefficients. The beam and diffuse estimation was inspired by the method described in Faiman et al. (1987).
+
+- Faiman, D., Zemel, A., & Zangvil, A. (1987). A method for monitoring insolation
 in remote regions. Solar Energy, 38(5), 327–333. https://doi.org/10.1016/0038-092X(87)90004-1
 
 Key Features:
@@ -25,6 +26,8 @@ import pvlib
 import pandas as pd
 from scipy.optimize import least_squares
 from joblib import Parallel, delayed
+from netCDF4 import Dataset, num2date
+import xarray as xr
 import re
 
 def calculate_solar_angles(timestamps, latitude, longitude, altitude=6, temperature=-6):
@@ -41,23 +44,16 @@ def calculate_solar_angles(timestamps, latitude, longitude, altitude=6, temperat
     Returns:
         pd.DataFrame: Solar position data (zenith, azimuth, declination, etc.).
     """
-    if isinstance(timestamps, pd.core.indexes.datetimes.DatetimeIndex | pd._libs.tslibs.timestamps.Timestamp):
-        if timestamps.tzinfo is None:
-            timestamps = timestamps.tz_localize('UTC')
-        solar_position = pvlib.solarposition.get_solarposition(
-            time=timestamps, latitude=latitude, longitude=longitude, altitude=altitude, temperature=temperature)
-        eot = solar_position['equation_of_time']
-        solar_position['hour_angle'] = pvlib.solarposition.hour_angle(
-            timestamps, longitude, eot)  # timestamps is already a pd.DatetimeIndex
-    else:
-        timestamps = pd.DatetimeIndex(timestamps)
-        if timestamps.tzinfo is None:
-            timestamps = timestamps.tz_localize('UTC')
-        solar_position = pvlib.solarposition.get_solarposition(
-            time=timestamps, latitude=latitude, longitude=longitude, altitude=altitude, temperature=temperature)
-        eot = solar_position['equation_of_time']
-        solar_position['hour_angle'] = pvlib.solarposition.hour_angle(
-            timestamps, longitude, eot)  # timestamps is not a pd.DatetimeIndex
+    if not isinstance(timestamps, pd.core.indexes.datetimes.DatetimeIndex):
+        timestamps = pd.DatetimeIndex([timestamps]) # The timestamps needs to be a DatetimeIndex
+
+    if timestamps.tzinfo is None:
+        timestamps = timestamps.tz_localize('UTC')
+    solar_position = pvlib.solarposition.get_solarposition(
+        time=timestamps, latitude=latitude, longitude=longitude, altitude=altitude, temperature=temperature)
+    eot = solar_position['equation_of_time']
+    solar_position['hour_angle'] = pvlib.solarposition.hour_angle(
+        timestamps, longitude, eot) 
 
     solar_position['declination'] = np.degrees(pvlib.solarposition.declination_spencer71(timestamps.day_of_year))
     return solar_position
@@ -92,6 +88,8 @@ def calculate_incident_angle(solar_angles, plane_inclination, plane_azimuth, lat
     )  # see formula in Duffie, J. A., & Beckman, W. A. (2013).
        # Available Solar Radiation Ch. 1. In Solar Engineering of Thermal Processes (pp. 43–137).
        # John Wiley & Sons, Inc. https://doi.org/10.1002/9781118671603.ch2
+       
+    # theta_i = pvlib.irradiance.aoi(plane_inclination, plane_azimuth+180, solar_angles['zenith'], solar_angles['azimuth'])
     theta_i = np.degrees(theta_i)
     return theta_i
 
@@ -114,7 +112,7 @@ def calculate_beam_coefficient(solar_angles, plane_inclination, plane_azimuth, l
     theta_i[theta_i > 90] = 90  # !!! VERY IMPORTANT !!! The incident angles above 90 have to be set to 90 to avoid the beam having an influence
     theta_i = np.radians(theta_i)
     theta_z = np.radians(solar_angles['zenith'])
-    beam_coefficient = np.cos(theta_i) / np.cos(theta_z)
+    beam_coefficient = np.cos(theta_i)/np.cos(theta_z) 
     return beam_coefficient
 
 def calculate_diffuse_coefficient(plane_inclination):
@@ -166,14 +164,14 @@ def least_squares_residuals(params, b, d, r, GTI, albedo=None):
     else:  # linear method case
         x, y = params  # (x,y) = (diffuse, beam)
         GTI_estim = (b + r * albedo) * y + (d + r * albedo) * x
-    return GTI_estim - GTI
+    return GTI - GTI_estim
 
-def estimate_diffuse_beam_faiman(variables, glob_value, lat, lon, method='linear'):
+def estimate_diffuse_beam(pyrano_var, glob_value, lat, lon, method='linear'):
     """
     Estimate diffuse and beam irradiance based on either linear or nonlinear equations.
 
     Parameters:
-        variables (list): List of GLOB plane names.
+        pyrano_var (list): List of GLOB plane names.
         glob_value (pd.DataFrame): Global irradiance and solar angles values
         obtained from the NetCDF GLOB dataset.
         lat (float): Latitude of the location.
@@ -183,18 +181,21 @@ def estimate_diffuse_beam_faiman(variables, glob_value, lat, lon, method='linear
     Returns:
         list: Estimated diffuse and beam irradiance, albedo, and error.
     """
-    
-    table_azim_incli = create_variable_table(variables)
+    lat=glob_value.latitude; lon=glob_value.longitude
+    table_azim_incli = create_variable_table(pyrano_var)
     GTI_glob = np.asarray(glob_value[table_azim_incli.index], dtype=float)
 
     # Interpolate NaN values in GTI_glob
     inclinations = table_azim_incli['inclination'].values
     azimuths = table_azim_incli['azimuth'].values
+    zenith = glob_value['zenith']  # degrees
+    cos_z = np.cos(np.radians(zenith))
     
     # Necessary solar angles for the geometry calculation.
     # Can also be calculated with the function 'solar_angle_calculation'
-    # if no in the initial dataset.
-    solar_angles = glob_value[['zenith','hour_angle', 'declination']] 
+    # if not in the initial dataset.
+    solar_angles = calculate_solar_angles(glob_value.name, lat, lon).squeeze()
+    # solar_angles = glob_value[['zenith','hour_angle', 'declination']] 
     
     b = np.array(calculate_beam_coefficient(solar_angles, inclinations, azimuths, lat, lon))
     d = np.array(calculate_diffuse_coefficient(inclinations))
@@ -207,7 +208,7 @@ def estimate_diffuse_beam_faiman(variables, glob_value, lat, lon, method='linear
     try:
         if method == 'linear':
             albedo = glob_value['albedo']
-            initial_guess = [10, 10]
+            initial_guess = [1, 1]
             # Add bounds if applicable
             bounds = ([0, 0], [np.inf, np.inf])
             results = least_squares(
@@ -215,7 +216,7 @@ def estimate_diffuse_beam_faiman(variables, glob_value, lat, lon, method='linear
                 initial_guess,
                 bounds=bounds,
                 args=(b, d, r, GTI_glob, albedo),
-                max_nfev=1000  # Increase maximum number of function evaluations
+                max_nfev=100  # Increase maximum number of function evaluations
             )
             D_prime, B_prime = results.x
         elif method == 'nonlinear':
@@ -227,7 +228,7 @@ def estimate_diffuse_beam_faiman(variables, glob_value, lat, lon, method='linear
                 initial_guess,
                 bounds=bounds,
                 args=(b, d, r, GTI_glob),
-                max_nfev=1000  # Increase maximum number of function evaluations
+                max_nfev=100  # Increase maximum number of function evaluations
             )
             D_prime, B_prime, albedo = results.x
         # Check if the solution is valid
@@ -235,20 +236,17 @@ def estimate_diffuse_beam_faiman(variables, glob_value, lat, lon, method='linear
             print("The least squares did not converge.")
             return [np.nan, np.nan, np.nan, np.nan, np.nan]
     except Exception:
+        print("The least squares did not work.")
         return [np.nan, np.nan, np.nan, np.nan, np.nan]
-    
-    zenith = glob_value['zenith']  # degrees
-    cos_z = np.cos(np.radians(zenith))
+
     I_0 = pvlib.irradiance.get_extra_radiation(glob_value.name) # glob_value.name = timestamp
     if not (np.isnan(D_prime) and np.isnan(B_prime)):
         D, B = calculate_D_and_B(I_0, cos_z, D_prime, B_prime)
-    D = D[0] if np.shape(D) == (1,) and not np.isnan(D[0]) else D
-    B = B[0] if np.shape(B) == (1,) and not np.isnan(B[0]) else B
-    D_prime = D_prime[0] if np.shape(D_prime) == (1,) and not np.isnan(D_prime[0]) else D_prime
-    B_prime = B_prime[0] if np.shape(B_prime) == (1,) and not np.isnan(B_prime[0]) else B_prime
-    albedo = albedo[0] if np.shape(albedo) == (1,) and not np.isnan(albedo[0]) else albedo
-    if D > 0 and B > 0 and zenith < 90:
-        return [np.round(D), np.round(B), np.round(albedo, 2), np.round(D_prime), np.round(B_prime)]
+    # print('D_prime',np.round(D_prime),'B_prime', np.round(B_prime))
+    # print('D',np.round(D),'B', np.round(B))
+
+    if B>0 and D>0 and zenith < 90:
+        return [np.round(abs(D)), np.round(abs(B)), np.round(albedo, 2), np.round(D_prime), np.round(B_prime)]
     else:
         return [np.nan, np.nan, np.nan, np.nan, np.nan]
 
@@ -272,6 +270,8 @@ def estimate_diffuse_beam_monte_carlo(variables, glob_value, lat, lon, n_simulat
     """
     table_azim_incli = create_variable_table(variables)
     GTI_glob = np.asarray(glob_value[table_azim_incli.index], dtype=float)
+    # Interpolate NaN values in GTI_glob
+    # GTI_glob = pd.Series(GTI_glob).interpolate(method='linear').values
    
     inclinations = table_azim_incli['inclination'].values
     azimuths = table_azim_incli['azimuth'].values
@@ -387,13 +387,14 @@ def calculate_D_and_B(I_0, cos_z, D_prime, B_prime):
         tuple: Estimated diffuse and beam irradiance.
     """
     a = 1
-    b = (I_0 - B_prime) * cos_z - D_prime
+    b = (I_0*cos_z - B_prime) - D_prime
     c = -D_prime * I_0 * cos_z
     # Calculate the discriminant
     discriminant = b**2 - 4*a*c
     # Check if the discriminant is non-negative
     if discriminant < 0:
         D, B = np.nan, np.nan
+        print("The discriminant is negative, no real roots exist.")
     else:
         # Calculate the two solutions for D
         D1 = (-b + np.sqrt(discriminant)) / (2*a)
@@ -401,34 +402,34 @@ def calculate_D_and_B(I_0, cos_z, D_prime, B_prime):
         # Select the positive root
         if D1 > 0:
             D = D1
-            B = I_0 / cos_z * (1 - D_prime / D)
+            B = I_0 * (1 - D_prime / D)
         elif D2 > 0:
             D = D2
-            B = I_0 / cos_z * (1 - D_prime / D)
+            B = I_0 * (1 - D_prime / D)
         else:
             D, B = np.nan, np.nan
     return D, B
 
-def calculate_Dprime_and_Bprime(I_0, zenith, D, I):
+def calculate_Dprime_and_Bprime(I_0, zenith, D, B):
     """
-    Calculate D' and I' from D and I using the provided formulas.
+    Calculate D' and B' from D and B using the provided formulas.
     See equation 1.9 (Appendix A) in Faiman et al., (1987).
 
     Parameters:
         I_0 (float): Extraterrestrial irradiance.
         zenith (float): Zenith angle (in degrees).
         D (float): Diffuse irradiance.
-        I (float): Beam irradiance.
+        B (float): Beam irradiance.
 
     Returns:
-        tuple: Calculated D' and I'.
+        tuple: Calculated D' and B'.
     """
     cos_z = np.cos(np.radians(zenith))
-    # Calculate I' using the formula
-    I_prime = I * (cos_z + D / I_0)
+    # Calculate B' using the formula
+    B_prime = B * (cos_z + D/I_0)
     # Calculate D' using the formula
-    D_prime = (I_0 - I * cos_z) * D / I_0
-    return D_prime, I_prime
+    D_prime = D * (1 - B/I_0)
+    return D_prime, B_prime
 
 def calculate_GTI_for_orientations(
     solar_angles, tilt_angles, azimuth_angles_calc, azimuth_angles_names,
@@ -655,3 +656,58 @@ def create_variable_table(variables):
             direction, beta = var.split('_')
             table.loc[var] = [azimuth_mapping[direction], int(beta)]
     return table
+
+
+def read_netcdf(file_path):
+    """
+    Read a NetCDF file using netCDF4 and convert it to an xarray Dataset,
+    including variables and global attributes.
+
+    Parameters:
+        file_path (str): Path to the NetCDF file.
+
+    Returns:
+        xr.Dataset: xarray Dataset with variables and global attributes.
+    """
+    with Dataset(file_path, "r") as nc:
+        # Get all variable names
+        var_names = set(nc.variables.keys())
+        # Get coordinate names (variables that are also dimensions)
+        coord_names = set(nc.dimensions.keys()).intersection(var_names)
+        # Get data variable names (not coordinates)
+        data_var_names = var_names - coord_names
+
+        # Convert coordinates
+        coords = {}
+        for var in coord_names:
+            if var == "Timestamp":
+                # Manually decode the Timestamp
+                time_values = nc.variables[var][:]
+                time_units = nc.variables[var].units  # e.g., "minutes since 2025-03-15 09:20:00"
+                time_origin = pd.Timestamp(time_units.split("since")[1].strip())
+                time_delta = pd.to_timedelta(time_values, unit="min")
+                time_coords = time_origin + time_delta
+                coords[var] = xr.DataArray(
+                    time_coords,
+                    dims=nc.variables[var].dimensions,
+                    attrs=nc.variables[var].__dict__,
+                )
+            else:
+                coords[var] = xr.DataArray(
+                    nc.variables[var][:],
+                    dims=nc.variables[var].dimensions,
+                    attrs=nc.variables[var].__dict__,
+                )
+
+        # Convert data variables
+        data_vars = {
+            var: xr.DataArray(
+                nc.variables[var][:],
+                dims=nc.variables[var].dimensions,
+                attrs=nc.variables[var].__dict__,
+            )
+            for var in data_var_names
+        }
+        # Create the Dataset
+        ds = xr.Dataset(data_vars, coords=coords, attrs=nc.__dict__)
+    return ds

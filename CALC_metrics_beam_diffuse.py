@@ -21,16 +21,26 @@ Date: May 30, 2025
 
 import pandas as pd
 import numpy as np
-from config_path import NYA_DATA_PATH, B_D_DATA_PATH
+from config_path import DATA_PATH
 import pvlib
 
 # Parameters
-method = 'nonlinear'; year = 2025; f = 10 #min data frequency
+# method = 'linear'; year = 2025; f = 10 #min data frequency
 three_pyranometers = 'no'
 ############################## File Paths #####################################
-bsrn_datafile = NYA_DATA_PATH / "NYA_radiation_2025-all.tab"
+bsrn_datafile = DATA_PATH / "NYA_BSRN_data"  / "NYA_radiation_2025-all.tab"
     
-output_file = B_D_DATA_PATH / f"{year}_error_beam_diffuse_{method}.xlsx"
+if three_pyranometers == 'yes':
+    # Case with 3 pyranometers
+    output_file = DATA_PATH / "Estim_Beam_Diffuse" / f"{year}_error_beam_diffuse_{method}_3pyrano.xlsx"
+    pyrano_vars = [
+        ['GHI', 'N_90', 'N_45'],
+        ['GHI', 'E_45', 'W_45'],
+        ['GHI', 'S_45', 'W_45'],
+        ['GHI', 'E_45', 'W_45']] 
+else:
+    pyrano_vars = [5, 9, 13, 25] # General case
+    output_file = DATA_PATH / "Estim_Beam_Diffuse"  / f"{year}_error_beam_diffuse_{method}.xlsx"
 ###############################################################################
 
 # Metric calculation functions
@@ -112,29 +122,19 @@ beam_perez, diffuse_perez = perez_dni, ghi_bsrn - np.cos(np.radians(zenith)) * p
 orgill_hollands = pvlib.irradiance.orgill_hollands(ghi_bsrn, zenith, time)
 beam_oh, diffuse_oh = orgill_hollands['dni'], orgill_hollands['dhi']
 
-if three_pyranometers == 'yes':
-    # Case with 3 pyranometers
-    output_file = B_D_DATA_PATH / f"{year}_error_beam_diffuse_{method}_3pyrano.xlsx"
-    pyrano_vars = [
-        ['GHI', 'N_90', 'N_45'],
-        ['GHI', 'E_45', 'W_45'],
-        ['GHI', 'S_45', 'W_45'],
-        ['GHI', 'E_45', 'W_45']] 
-else: pyrano_vars = [5, 9, 13, 25] # General case
 
 results_df = pd.DataFrame()
 for idx, pyr_nr in enumerate(pyrano_vars):
 
-    ############################## File Paths #####################################
+    ######################### Input File Paths ################################
     if three_pyranometers == 'yes':
         # Case with 3 pyranometers
-        beam_diff_estim_datafile = B_D_DATA_PATH / \
+        beam_diff_estim_datafile = DATA_PATH / "Estim_Beam_Diffuse" / \
             f"{year}_error_beam_diffuse_{method}_{pyr_nr}.xlsx"
     else: 
-        beam_diff_estim_datafile = B_D_DATA_PATH / \
+        beam_diff_estim_datafile = DATA_PATH / "Estim_Beam_Diffuse" / \
             f"{year}_estimation_beam_diffuse_{f}min_{method}_{str(pyr_nr)}pyrano.csv"
-        
-    ###############################################################################
+    ###########################################################################
   
     glob_estimation_data = pd.read_csv(beam_diff_estim_datafile, sep='\t', parse_dates=['Timestamp'], index_col=['Timestamp'], skiprows=10)
 

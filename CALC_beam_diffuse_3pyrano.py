@@ -21,7 +21,7 @@ Date: May 30, 2025
 import xarray as xr
 import pandas as pd
 from datetime import datetime
-from config_path import B_D_DATA_PATH, GLOB_DATA_PATH
+from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
 method = 'linear'; year = 2025; f = 10 #min data frequency
@@ -34,16 +34,15 @@ pyrano_vars = [['GHI', 'N_90', 'N_45'],
 
 for pyrano_var in pyrano_vars:
     ############################## File Paths #####################################
+    glob_datafile = DATA_PATH / "GLOB_data"  / f"GLOB_data_{f}min_{year}.nc"
     
-    glob_datafile = GLOB_DATA_PATH / f"GLOB_data_{f}min_{year}.nc"
-    
-    output_file = B_D_DATA_PATH \
+    output_file = DATA_PATH / "Estim_Beam_Diffuse"  \
      / f"{year}_estimation_beam_diffuse_{f}min_{method}_{(pyrano_var)}pyrano.csv"
-    
     ###############################################################################
     
     # Load GLOB data
-    ds_glob = xr.open_dataset(glob_datafile)
+    ds_glob = fct.read_netcdf(glob_datafile)
+
     lat_glob = float(ds_glob.latitude.values); lon_glob = float(ds_glob.longitude.values)
     
     # List to store all results

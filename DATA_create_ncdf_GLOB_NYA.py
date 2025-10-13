@@ -22,7 +22,7 @@ Date: November 1, 2024
 import pandas as pd
 import xarray as xr
 import numpy as np
-from config_path import DATA_PATH, GLOB_DATA_PATH, NYA_DATA_PATH
+from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
 
@@ -153,54 +153,6 @@ def compute_and_filter_albedo(ds):
 
     return ds
 
-def spectral_correction(ds, h=0.01):
-    """
-    Apply spectral correction to the silicon cell pyranometer data as explained in Balthazar et al. (2015).
-
-    Parameters:
-        - ds: xarray Dataset containing the data.
-        - h: Height above sea level in km (default is 0.01).
-
-    Returns:
-        - xarray Dataset with corrected components.
-    """
-    
-    timestamps_ds = ds['Timestamp']
-    lat = float(ds.latitude.values); lon = float(ds.longitude.values)
-
-    # List of components to correct
-    components = ['GHI', 'S_45', 'S_90', 'S_135', 'SW_45', 'SW_90', 'SW_135',
-                  'W_45', 'W_90', 'W_135', 'NW_45', 'NW_90', 'NW_135', 'N_45',
-                  'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45', 'E_90',
-                  'E_135', 'SE_45', 'SE_90', 'SE_135']
-
-    # Apply the correction to each component
-    for component in components:
-        if component in ds:
-
-            table_azim_incli = fct.create_variable_table([component])
-            inclinations = table_azim_incli['inclination'].values
-            azimuths = table_azim_incli['azimuth'].values
-
-            solar_angles = pd.DataFrame({
-                'declination': ds['declination'].values,
-                'hour_angle': ds['hour_angle'].values
-            })
-        
-            theta_i = fct.calculate_incident_angle(solar_angles, inclinations, azimuths, lat, lon)
-            theta_i[theta_i > 90] = 90; ####  !!!! VERY IMPORTANT !!!!
-            # Calculate absolute air mass (AM_a)
-            AM_a = np.exp(-0.0001184 * h) * (np.cos(np.radians(theta_i)) + 0.5057 * (96.080 - theta_i)**(-1.634))**(-1)
-
-            # Calculate f1
-            f1 = 0.000263 * (AM_a)**3 - 0.00632 * (AM_a)**2 + 0.054 * (AM_a) + 0.932
-
-            # Calculate f2
-            f2 = -0.00000004504 * theta_i**3 - 0.00001357 * theta_i**2 + 0.0006074 * theta_i + 1
-            
-            ds[f'{component}'] = ds[component] / (f1 * f2)
-
-    return ds
 
 def save_to_netcdf(ds, output_file):
     """
@@ -294,10 +246,10 @@ def add_global_attributes(ds, **kwargs):
     return ds
 
 # %% ---- Process Data ---- #
-glob_file_2025 = GLOB_DATA_PATH / "GLOB_data_30sec_2025_NYA.dat"
-bsrn_file_2025 = NYA_DATA_PATH / "NYA_radiation_2025-all.tab"
+glob_file_2025 =  DATA_PATH / "GLOB_data" / "GLOB_data_30sec_2025_NYA.dat"
+bsrn_file_2025 =  DATA_PATH / "NYA_BSRN_data" / "NYA_radiation_2025-all.tab"
 latitude=78.92240; longitude=11.92174 # Ny-Ålesund
-f = .5 # minute
+f =10 # minute
 
 # Load data
 df = read_and_preprocess_data(glob_file_2025)
@@ -309,10 +261,10 @@ if f > 1:
     df.index = df.index + pd.Timedelta(minutes=f/2)
     df = df.resample(f'{f}min').mean()
     df_bsrn = df_bsrn.resample(f'{f}min').first()
-    output_file = GLOB_DATA_PATH / f"GLOB_data_{f}min_2025.nc"
+    output_file =  DATA_PATH / "GLOB_data" / f"GLOB_data_{f}min_2025.nc"
 else: 
     freq = '30 seconds'
-    output_file = GLOB_DATA_PATH / "GLOB_data_30sec_2025.nc"
+    output_file =  DATA_PATH / "GLOB_data" / "GLOB_data_30sec_2025.nc"
 
 df_bsrn.index = df_bsrn.index.tz_localize('UTC')
 
@@ -321,16 +273,15 @@ df = substitute_ghi_ground(df, df_bsrn) # Substitute the ground reflection with 
 ds = convert_df_to_xarray_with_metadata(df)
 ds = add_solar_angles_and_coordinates(ds, fct, latitude, longitude)
 ds = compute_and_filter_albedo(ds)
-ds = spectral_correction(ds)
 
 ds = add_global_attributes(
 ds=ds,
-title= 'Global tilted irradiance on 25 faces measured in Ny-Ålesund (2025)',
+title= 'Global tilted irradiance on 25 planes measured in Ny-Ålesund (2025)',
 summary=f'This file includes a time series of global tilted irradiance (GTI) \
 measurements every {freq}, in 2025 in Ny-Ålesund.\n\
 The measurements were acquired with a 25-pyranometer array called GLOB, mounted \
 in the shape of rhombicuboctahedron. They consist of solar irradiance recorded \
-with Apogee SP-110 pyranometers.\n\
+with Apogee SP-110 pyranometers on 25 different planes.\n\
 Each GTI components is labeled with the format "azimuth_tilt". We also included \
 the solar angles associated to each timestamp, calculated with pvlib.',
 keywords='GCMDSK: EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC RADIATION > SHORTWAVE RADIATION, '
@@ -342,9 +293,7 @@ geospatial_lon_min='11.92174',
 geospatial_lon_max='11.92174',
 time_coverage_start='2025-03-15',
 time_coverage_end='2025-09-05',
-history='- We created the file using netCDF4 in Python.\n'
-'- We applied the spectral filter for silicon cell pyranometer data detailed in \
-Balthazar et al. (2015).',
+history='- We created the file using netCDF4 in Python.',
 comments='The albedo component was calculated with two upward and downward Apogee \
 pyranometers from GLOB. But, between 2025-05-09 and 2025-08-22 the ground GHI \
 sensor fell, and we used the albedo measurement from the BSRN station nearby instead.',

@@ -24,17 +24,16 @@ Date: May 30, 2025
 import pandas as pd
 import xarray as xr
 import numpy as np
-from config_path import GLOB_DATA_PATH, GTI_DATA_PATH
+from config_path import DATA_PATH, GTI_DATA_PATH
 import glob_functions_calculation as fct
 
 # Parameters
 method = 'linear'; year = 2025; f = 10 #min data frequency
 
 ############################## File Paths #####################################
-glob_datafile = GLOB_DATA_PATH / f"GLOB_data_10min_{year}.nc"
+glob_datafile = DATA_PATH / "GLOB_data"  / f"GLOB_data_10min_{year}.nc"
 
-output_file = GTI_DATA_PATH / f"{year}_error_GTI_{method}.xlsx"
-
+output_file = DATA_PATH / "Estim_GTI"  / f"{year}_error_GTI_{method}.xlsx"
 ###############################################################################
     
 results_df = pd.DataFrame()
@@ -120,21 +119,20 @@ print(f"Error metrics saved to {output_file}")
 import pandas as pd
 import xarray as xr
 import numpy as np
-from config_path import GLOB_DATA_PATH, GTI_DATA_PATH
+from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
 # Parameters
 year = 2025; f = 10 #min data frequency
 
-results_df = pd.DataFrame()
-
 ############################## File Paths #####################################
-glob_datafile = GLOB_DATA_PATH / f"GLOB_data_10min_{year}.nc"
-GTI_estimation_datafile = GTI_DATA_PATH / f"{year}_estimation_GTI_{f}min_NYA.csv"
+glob_datafile = DATA_PATH / "GLOB_data" / f"GLOB_data_10min_{year}.nc"
+GTI_estimation_datafile = DATA_PATH / "Estim_GTI" / f"{year}_estimation_GTI_{f}min_NYA.csv"
 
-output_file = GTI_DATA_PATH / f"{year}_error_GTI_NYA.xlsx"
-
+output_file = DATA_PATH / "Estim_GTI" / f"{year}_error_GTI_NYA.xlsx"
 ###############################################################################
+
+results_df = pd.DataFrame()
 
 # Determine validation pyranometers
 removed_pyrano = fct.find_content_between_braces(GTI_estimation_datafile, line_number=4)

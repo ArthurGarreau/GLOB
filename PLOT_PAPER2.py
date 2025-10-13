@@ -32,40 +32,23 @@ from matplotlib.gridspec import GridSpec
 import numpy as np
 import pandas as pd
 import calendar
-import xarray as xr
 import pvlib
 import glob_functions_calculation as fct
-from config_path import GTI_DATA_PATH, B_D_DATA_PATH, HIGH_RES_PLOT_PATH, \
-LOW_RES_PLOT_PATH, ALL_PLOT_PATH, GLOB_DATA_PATH, NYA_DATA_PATH
+from config_path import DATA_PATH, FIG_PATH
 
-# --- Global Parameters ---
-method = 'nonlinear'  # Default method for irradiance decomposition
-f = 10  # Data frequency in minutes
-pyrano_nr = 5  # Number of pyranometers used in estimations
 
-###############################################################################
-# --- File Paths ---
-# Define paths to input data files
-gti_estimation_datafile = GTI_DATA_PATH / \
-    f"2023-24_estimation_GTI_{f}min_{method}_{pyrano_nr}pyrano.csv"
-gti_nya_datafile = GTI_DATA_PATH / \
-    f"2025_estimation_GTI_{f}min_NYA.csv"
-B_D_estimations_datafile = B_D_DATA_PATH / \
-    f"2025_estimation_beam_diffuse_{f}min_{method}_{pyrano_nr}pyrano.csv"
-bsrn_datafile = NYA_DATA_PATH / "NYA_radiation_2025-all.tab"
-glob_data_file = GLOB_DATA_PATH / "GLOB_data_10min_2023-24.nc"
-
-# %% Fig 5: Beam and diffuse daily evolution
+# %% Fig 4: Beam and diffuse daily evolution
 # -----------------------------------------
 # This section plots the daily evolution of beam and diffuse irradiance components
 # for a specific date, comparing BSRN reference data with GLOB estimations and model predictions
 
 # --- Parameters ---
 date_str = '2025-03-29'  # Date for analysis
-pyrano_nr = 25  # Number of pyranometers
-method = 'linear'  # Method used for this specific figure
-B_D_estimations_datafile = B_D_DATA_PATH / \
-    f"2025_estimation_beam_diffuse_{f}min_{method}_{pyrano_nr}pyrano.csv"
+pyrano_nr= 25; method = "nonlinear"
+B_D_estimations_datafile = DATA_PATH / "Estim_Beam_Diffuse" / \
+    f"2025_estimation_beam_diffuse_10min_{method}_{pyrano_nr}pyrano_test.csv"
+glob_datafile = DATA_PATH / "GLOB_data" / "GLOB_data_10min_2025.nc"
+bsrn_datafile = DATA_PATH / "BSRN_NYA_data" / "NYA_radiation_2025-all.tab"
 
 # --- Helper Functions ---
 def round_up_to_hundred(x):
@@ -91,14 +74,14 @@ def calculate_decomposition_models(ghi, time, latitude, longitude):
 # --- Load Data ---
 # Load BSRN data
 bsrn_data = pd.read_csv(bsrn_datafile, sep='\t',skiprows=24, parse_dates=['Date/Time'],
-    index_col='Date/Time').resample(f'{f}min').first()
+    index_col='Date/Time').resample("10min").first()
 # Load GLOB data
 glob_estim_data = pd.read_csv(B_D_estimations_datafile,parse_dates=['Timestamp'],
     index_col='Timestamp', sep='\t', header=10)
 # Load GHI data from NetCDF file
-with xr.open_dataset(GLOB_DATA_PATH / f"GLOB_data_10min_2025.nc") as ds:
-    ghi_day = ds['GHI'].to_dataframe()
-    latitude, longitude = ds.latitude.values, ds.longitude.values
+ds_glob = fct.read_netcdf(glob_datafile)
+ghi_day = ds_glob['GHI'].to_dataframe()
+latitude, longitude = ds_glob.latitude.values, ds_glob.longitude.values
 
 # --- Filter Data for Specific Date ---
 bsrn_data = bsrn_data.loc[date_str]
@@ -113,7 +96,7 @@ diffuse_glob = glob_data['Diffuse']
 
 # --- Calculate Decomposition Models ---
 time = pd.date_range(start=f"{date_str} 00:00:00", end=f"{date_str} 23:50:00",
-    freq=f"{f}min")
+    freq="10min")
 beam_erbs, diffuse_erbs, beam_perez, diffuse_perez, beam_oh, diffuse_oh = calculate_decomposition_models(
     ghi_day_current['GHI'].values, time, latitude, longitude)
 
@@ -149,24 +132,27 @@ start_time = pd.Timestamp(f"{date_str} 03:00:00")
 end_time = pd.Timestamp(f"{date_str} 21:00:00")
 ax1.set_xlim(start_time, end_time)
 ax2.set_xlim(start_time, end_time)
+ax2.set_ylim(0, 200)
 ax2.xaxis.set_major_locator(mdates.HourLocator(interval=1))
 ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
 ax2.annotate(date_str, xy=(0.90, -0.15), xycoords='axes fraction')
 plt.tight_layout()
 
 # Save the plot
-# plt.savefig(ALL_PLOT_PATH / f"Beam_Diffuse_{date_str}_{pyrano_nr}pyrano_{method}.png.png", dpi=300, bbox_inches='tight')
-plt.savefig(LOW_RES_PLOT_PATH / "Figure 5.png", dpi=300, bbox_inches='tight')
-# plt.savefig(HIGH_RES_PLOT_PATH / "Figure 5.pdf", format='pdf', bbox_inches='tight')
+# plt.savefig(FIG_PATH / "Figure_all" / f"Beam_Diffuse_{date_str}_{pyrano_nr}pyrano_{method}.png.png", dpi=300, bbox_inches='tight')
+# plt.savefig(FIG_PATH / "Figure_low_res" / "Figure 4.png", dpi=300, bbox_inches='tight')
+# plt.savefig(FIG_PATH / "Figure_high_res" / "Figure 4.pdf", format='pdf', bbox_inches='tight')
 # Optionally show the plot
-plt.close()
+# plt.close()
 
-# %% Fig 6-7: Combined polar heatmap of GTI - Monthly average of incoming and reflected GTI
+# %% Fig 5-6: Combined polar heatmap of GTI - Monthly average of incoming and reflected GTI
 # --------------------------------------------------------------------------------
 # This section creates polar heatmaps showing monthly averages of GTI for sky-facing and ground-facing planes
 # for the period from March to September in 2023-2024
 # Moreover, this code enables saving the data from the plot in a .csv file.
 
+gti_estimation_datafile = DATA_PATH / "Estim_GTI" / \
+    "2023-24_estimation_GTI_10min_nonlinear_5pyrano.csv"
 # --- Load GTI Data ---
 gti_data = pd.read_csv(gti_estimation_datafile, sep='\t', parse_dates=True, index_col='Timestamp', header=10)
 gti_data = gti_data[~gti_data.index.duplicated(keep='first')]
@@ -283,9 +269,9 @@ for idx, title in enumerate(titles):
     plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
     # Save the combined plot (uncomment if needed)
-    # fig.savefig(ALL_PLOT_PATH / f"monthly_avg_polar_heatmap_{names[idx]}_{year}.png", dpi=300, bbox_inches='tight')
-    # fig.savefig(LOW_RES_PLOT_PATH / f"Figure {6+idx}.png", dpi=300, bbox_inches='tight')
-    # fig.savefig(HIGH_RES_PLOT_PATH / f"Figure {6+idx}.pdf", format='pdf', bbox_inches='tight')
+    # fig.savefig(FIG_PATH / "Figure_all" / f"monthly_avg_polar_heatmap_{names[idx]}_{year}.png", dpi=300, bbox_inches='tight')
+    # fig.savefig(FIG_PATH / "Figure_low_res" / f"Figure {5+idx}.png", dpi=300, bbox_inches='tight')
+    # fig.savefig(FIG_PATH / "Figure_high_res" / f"Figure {5+idx}.pdf", format='pdf', bbox_inches='tight')
     # plt.close()
 
 # Combine all monthly matrices into a single DataFrame and save to CSV
@@ -299,14 +285,14 @@ all_months_pivot = all_months_df.pivot_table(
 # Round the irradiance values to 2 decimal places
 all_months_pivot = all_months_pivot.round()
 # Save to CSV
-all_months_pivot.to_csv(HIGH_RES_PLOT_PATH / 'Figure 6-7.csv', sep='\t',index=False)
+all_months_pivot.to_csv(FIG_PATH / "Figure_high_res" / 'Figure 5-6.csv', sep='\t',index=False)
 
-# %% Fig 8-9: Average GTI in 2023-24 on monofacial and bifacial
+# %% Fig 7-8: Average GTI in 2023-24 on monofacial and bifacial
 # -----------------------------------------------------------
 # This section creates polar heatmaps showing annual averages of GTI for monofacial and bifacial configurations
+glob_data_file = DATA_PATH / "GLOB_data" / "GLOB_data_10min_2023-24.nc"
 
 # --- Load Data ---
-glob_data_file = GLOB_DATA_PATH / f"GLOB_data_{f}min_2023-24.nc"
 gti_data = pd.read_csv(gti_estimation_datafile, sep='\t', parse_dates=True, index_col='Timestamp', header=10)
 
 # Create the date ranges
@@ -378,14 +364,16 @@ cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
 # Save and show the monthly plot
-fig.savefig(ALL_PLOT_PATH / "annual_avg_polar_heatmap_GLOB_estim_2023-24.png", dpi=300, bbox_inches='tight')
-fig.savefig(LOW_RES_PLOT_PATH / "Figure 8.png", dpi=300, bbox_inches='tight')
-fig.savefig(HIGH_RES_PLOT_PATH / "Figure 8.pdf", format='pdf', bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_all" / "annual_avg_polar_heatmap_GLOB_estim_2023-24.png", dpi=300, bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 7.png", dpi=300, bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 7.pdf", format='pdf', bbox_inches='tight')
 # plt.close()
 
-# %% Fig 9: GTI measured with GLOB (must run Fig 8 before)
+# %% Fig 8: GTI measured with GLOB
 # -------------------------------
 # This section creates polar heatmaps showing annual averages of GTI based on actual GLOB measurements
+
+glob_data_file = DATA_PATH / "GLOB_data" / "GLOB_data_10min_2023-24.nc"
 
 # Create the date ranges
 dates_2023 = pd.date_range('2023-04-01', '2023-09-30', freq='10min')
@@ -393,13 +381,9 @@ dates_2024 = pd.date_range('2024-04-01', '2024-09-30', freq='10min')
 date_range = dates_2023.union(dates_2024); date_range = date_range.tz_localize('UTC')
 
 # --- Load Data ---
-ds_glob = xr.open_dataset(glob_data_file)
+ds_glob = fct.read_netcdf(glob_data_file)
 df_glob = ds_glob.to_dataframe(); df_glob.index = df_glob.index.tz_localize('UTC')
 df_glob = df_glob.reindex(date_range, fill_value=pd.NA)
-# We mask the glob values with the same NaN mask as in the estimations data
-# to perform the averaging on the same data.
-# mask = df_estim['gti0_45'].isna()
-# df_glob = df_glob[~mask]
 
 # Define azimuth orientations and angles
 azimuth_orientations = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW','N']
@@ -470,18 +454,18 @@ cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
 # Save the plot
-# fig.savefig(ALL_PLOT_PATH / "annual_avg_polar_heatmap_GLOB_meas_2023-24.png", dpi=300, bbox_inches='tight')
-fig.savefig(LOW_RES_PLOT_PATH / "Figure 9.png", dpi=300, bbox_inches='tight')
-# fig.savefig(HIGH_RES_PLOT_PATH / "Figure 9.pdf", format='pdf', bbox_inches='tight')
+# fig.savefig(FIG_PATH / "Figure_all" / "annual_avg_polar_heatmap_GLOB_meas_2023-24.png", dpi=300, bbox_inches='tight')
+# fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 8.png", dpi=300, bbox_inches='tight')
+# fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 8.pdf", format='pdf', bbox_inches='tight')
 # plt.close()
 
-# %% Fig 10: Most used pyranometers for estimations with a combination of 3
+# %% Fig 9: Most used pyranometers for estimations with a combination of 3
 # ------------------------------------------------------------------------
 # This section creates heatmaps showing the most used pyranometer combinations
 # for 3-sensor configurations throughout the day
 
 # --- Load Data ---
-beam_diffuse_datafile = B_D_DATA_PATH / "2025_bestestimation_beam_diffuse_10min_linear.csv"
+beam_diffuse_datafile = DATA_PATH / "Estim_Beam_Diffuse" / "2025_bestestimation_beam_diffuse_10min_linear.csv"
 data = pd.read_csv(beam_diffuse_datafile, parse_dates=['Timestamp'], index_col='Timestamp', sep='\t', header=10)
 
 # Define the cardinal directions and tilt angles
@@ -598,7 +582,7 @@ cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
 
 # Adjust layout to prevent overlap
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
-# fig.savefig(ALL_PLOT_PATH / "Most_used_pyrano3.png", dpi=300, bbox_inches='tight')
-fig.savefig(LOW_RES_PLOT_PATH / "Figure 10.png", dpi=300, bbox_inches='tight')
-# fig.savefig(HIGH_RES_PLOT_PATH / "Figure 10.pdf", format='pdf', bbox_inches='tight')
-plt.close()
+# fig.savefig(FIG_PATH / "Figure_all" / "Most_used_pyrano3.png", dpi=300, bbox_inches='tight')
+# fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 9.png", dpi=300, bbox_inches='tight')
+# fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 9.pdf", format='pdf', bbox_inches='tight')
+# plt.close()

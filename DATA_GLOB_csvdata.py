@@ -25,17 +25,15 @@ Date: November 1, 2024
 """
 
 import pandas as pd
-from pathlib import Path
+from config_path import DATA_PATH
 
 
 ############################## File Paths #####################################
 
-RAW_DATA = Path(r"C:\Users\arthurg\OneDrive - NTNU\Workspace\Data\GLOB\Raw_Data")
-input_file_data_path_2023 = RAW_DATA / "DATA_2023"
-input_file_data_path_2024 = RAW_DATA / "DATA_2024"
-input_file_data_path_2025 = RAW_DATA / "DATA_2025"
+input_file_data_path_2023 = DATA_PATH / "RAW_data" / "DATA_2023"
+input_file_data_path_2024 = DATA_PATH / "RAW_data" / "DATA_2024"
+input_file_data_path_2025 = DATA_PATH / "RAW_data" / "DATA_2025"
 
-output_file_data_path = RAW_DATA.parent
 ###############################################################################
 
 """
@@ -225,8 +223,7 @@ df= pd.read_csv(output_file, low_memory=False)
 
 # Load the data into a DataFrame
 input_file  = input_file_data_path_2025 / "CR1000X_GLOB_online_GLOB_30Sec.dat" 
-output_file = output_file_data_path / "GLOB_data_30sec_2025_NYA.dat"
-
+output_file = DATA_PATH / "GLOB_data" / "GLOB_data_30sec_2025_NYA.dat"
 
 # Load the data, skipping the header rows for processing
 df = pd.read_csv(input_file, skiprows=[0,2,3], low_memory=False)

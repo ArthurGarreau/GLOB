@@ -23,7 +23,7 @@ import pandas as pd
 import numpy as np
 from itertools import combinations
 from datetime import datetime
-from config_path import B_D_DATA_PATH, GLOB_DATA_PATH, NYA_DATA_PATH
+from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
 method = 'linear'; year = 2025; f = 10 #min data frequency
@@ -33,13 +33,11 @@ pyrano_vars = ['GHI','N_45', 'N_90', 'NE_45', 'NE_90', 'E_45', 'E_90',
      'W_45', 'W_90', 'NW_45', 'NW_90']
 
 ############################## File Paths #####################################
+bsrn_datafile = DATA_PATH / "NYA_BSRN_data" / "NYA_radiation_2025-all.tab"
+glob_datafile = DATA_PATH / "GLOB_data" / f"GLOB_data_{f}min_{year}.nc"
 
-bsrn_datafile = NYA_DATA_PATH / "NYA_radiation_2025-all.tab"
-glob_datafile = GLOB_DATA_PATH / f"GLOB_data_{f}min_{year}.nc"
-
-output_file = B_D_DATA_PATH / \
+output_file = DATA_PATH / "NYA_BSRN_data"  / \
     f"{year}_bestestimation_beam_diffuse_{f}min_{method}.csv"
-
 ###############################################################################
 
 # Generate all combinations of pyrano_var
@@ -53,7 +51,7 @@ df_NYA = df_NYA.resample(f'{f}min').first()
 true_estimations = df_NYA[['DIF', 'DIR']]
 
 # Load GLOB data
-ds_glob = xr.open_dataset(glob_datafile)
+ds_glob = fct.read_netcdf(glob_datafile)
 lat_glob = float(ds_glob.latitude.values); lon_glob = float(ds_glob.longitude.values)
 
 # List to store all results
