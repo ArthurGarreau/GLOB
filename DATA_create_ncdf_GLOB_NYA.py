@@ -41,7 +41,7 @@ def read_and_preprocess_data(file_path):
 
     return df
 
-def convert_df_to_xarray_with_metadata(resampled_df):
+def convert_df_to_xarray_with_metadata(resampled_df, latitude, longitude):
     """
     Convert a resampled DataFrame to an xarray Dataset and add metadata to the Timestamp variable.
 
@@ -53,21 +53,172 @@ def convert_df_to_xarray_with_metadata(resampled_df):
     """
     # Convert DataFrame to Xarray Dataset
     ds = xr.Dataset.from_dataframe(resampled_df)
-
-    # Process timestamps
     timestamps_ds = pd.to_datetime(ds['Timestamp']).astype('datetime64[ns]').tz_localize('UTC')
-
-    # Add metadata to the Timestamp variable
     ds['Timestamp'] = timestamps_ds.values
     ds['Timestamp'].attrs.update({
         'calendar': 'gregorian',
         'long_name': 'UTC time',
-        'standard_name': 'time'
+        'standard_name': 'time',
     })
-
-    # Drop duplicates
     ds = ds.drop_duplicates(dim='Timestamp')
-    timestamps_ds = timestamps_ds.drop_duplicates()
+    ds['RECORD'] = ds['RECORD'].astype('int32')
+    
+    # Define metadata for each variable
+    variable_metadata = {
+        'RECORD': {
+            'long_name': 'Record number',
+            'units': '1',
+        },
+        'Temp': {
+            'long_name': 'Temperature',
+            'standard_name': 'air_temperature',
+            'units': 'Celsius',
+        },
+        'GHI': {
+            'long_name': 'Global horizontal irradiance',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'S_45': {
+            'long_name': 'South-facing irradiance at 45° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'S_90': {
+            'long_name': 'South-facing irradiance at 90° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'S_135': {
+            'long_name': 'South-facing irradiance at 135° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'SW_45': {
+            'long_name': 'Southwest-facing irradiance at 45° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'SW_90': {
+            'long_name': 'Southwest-facing irradiance at 90° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'SW_135': {
+            'long_name': 'Southwest-facing irradiance at 135° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'W_45': {
+            'long_name': 'West-facing irradiance at 45° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'W_90': {
+            'long_name': 'West-facing irradiance at 90° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'W_135': {
+            'long_name': 'West-facing irradiance at 135° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'NW_45': {
+            'long_name': 'Northwest-facing irradiance at 45° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'NW_90': {
+            'long_name': 'Northwest-facing irradiance at 90° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'NW_135': {
+            'long_name': 'Northwest-facing irradiance at 135° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'N_45': {
+            'long_name': 'North-facing irradiance at 45° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'N_90': {
+            'long_name': 'North-facing irradiance at 90° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'N_135': {
+            'long_name': 'North-facing irradiance at 135° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'NE_45': {
+            'long_name': 'Northeast-facing irradiance at 45° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'NE_90': {
+            'long_name': 'Northeast-facing irradiance at 90° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'NE_135': {
+            'long_name': 'Northeast-facing irradiance at 135° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'E_45': {
+            'long_name': 'East-facing irradiance at 45° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'E_90': {
+            'long_name': 'East-facing irradiance at 90° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'E_135': {
+            'long_name': 'East-facing irradiance at 135° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'SE_45': {
+            'long_name': 'Southeast-facing irradiance at 45° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'SE_90': {
+            'long_name': 'Southeast-facing irradiance at 90° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'SE_135': {
+            'long_name': 'Southeast-facing irradiance at 135° tilt',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'GHI_ground': {
+            'long_name': 'Ground reflected horizontal irradiance',
+            'standard_name': 'solar_irradiance',
+            'units': 'W m-2',
+        },
+        'albedo': {
+            'long_name': 'Surface albedo',
+            'standard_name': 'surface_albedo',
+            'units': '1',
+        },
+    }
+    
+    # Add latitude and longitude as scalar coordinates
+    ds.coords['lat'] = ((), latitude, {'units': 'degrees_north', 'long_name': 'Latitude of the location', 'standard_name': 'latitude'})
+    ds.coords['lon'] = ((), longitude, {'units': 'degrees_east', 'long_name': 'Longitude of the location', 'standard_name': 'longitude'})
+
+    # Assign metadata to each variable
+    for var_name, attrs in variable_metadata.items():
+        if var_name in ds:
+            ds[var_name].attrs.update(attrs)
 
     return ds
 
@@ -84,34 +235,20 @@ def add_solar_angles_and_coordinates(ds, fct, latitude, longitude):
     Returns:
         - xarray Dataset with added latitude, longitude, and solar angles.
     """
+
     # Calculate solar angles
     timestamps_ds = pd.to_datetime(ds['Timestamp']).astype('datetime64[ns]').tz_localize('UTC')
     solar_angles = fct.calculate_solar_angles(timestamps_ds, latitude, longitude)
 
     # Add solar angles to the dataset
     for var, values in solar_angles.items():
-        ds[var] = (('Timestamp'), values)
+        ds[var] = (('Timestamp',), values.values)
         ds[var].attrs.update({
             'units': 'degrees',
             'long_name': f'Solar {var.replace("_", " ")}',
-            'standard_name': var
+            'standard_name': 'solar' + var
         })
 
-    # Add latitude and longitude to the dataset
-    ds['latitude'] = ((), latitude)
-    ds['longitude'] = ((), longitude)
-
-    ds['latitude'].attrs.update({
-        'units': 'degrees',
-        'long_name': 'Latitude of the location',
-        'standard_name': 'latitude'
-    })
-
-    ds['longitude'].attrs.update({
-        'units': 'degrees',
-        'long_name': 'Longitude of the location',
-        'standard_name': 'longitude'
-    })
 
     return ds
 
@@ -141,30 +278,19 @@ def compute_and_filter_albedo(ds):
     # Set the daily mean albedo values for each day
     for day in daily_mean_albedo.Timestamp:
         daily_mean = daily_mean_albedo.sel(Timestamp=day).item()
-        new_albedo.loc[new_albedo.Timestamp.dt.floor('D') == day] = daily_mean
+        new_albedo.loc[dict(Timestamp=new_albedo.Timestamp.dt.floor('D') == day)] = daily_mean
 
     # Add albedo to the original dataset
-    ds['albedo'] = new_albedo
+    ds['albedo'] = (('Timestamp',), new_albedo.values)
     ds['albedo'].attrs.update({
-        'units': 'dimensionless',
+        'units': '1',
         'long_name': 'Surface Albedo',
-        'standard_name': 'albedo'
+        'standard_name': 'surface_albedo'
     })
 
     return ds
 
-
-def save_to_netcdf(ds, output_file):
-    """
-    Save the xarray Dataset to a NetCDF file.
-    """
-    for attr in ['calendar', 'units']:
-        if attr in ds['Timestamp'].attrs:
-            del ds['Timestamp'].attrs[attr]
-
-    ds.to_netcdf(output_file)
-    print(f"{f}-minute NetCDF file created at: {output_file}")
-    
+   
 def substitute_ghi_ground(df, df_bsrn):
     """
     Substitute GHI_ground values in df with SWU values from df_bsrn for the period 2025-05-09 to 2025-08-21.
@@ -202,7 +328,6 @@ def add_global_attributes(ds, **kwargs):
         'title': kwargs.get('title', ''),
         'summary': kwargs.get('summary', ''),
         'keywords': kwargs.get('keywords', ''),
-        'keywords_vocabulary': kwargs.get('keywords_vocabulary', 'GCMDSK: GCMD Science Keywords, GCMDLOC: GCMD'),
         'Conventions': kwargs.get('Conventions', 'CF-1.8, ACDD-1.3'),
         'data_type': kwargs.get('data_type', 'netCDF-4'),
         'geospatial_lat_min': kwargs.get('geospatial_lat_min', ''),
@@ -229,21 +354,32 @@ def add_global_attributes(ds, **kwargs):
         'publisher_url': kwargs.get('publisher_url', ''),
         'publisher_email': kwargs.get('publisher_email', ''),
         'publisher_type': kwargs.get('publisher_type', 'institution'),
+        'station_name': kwargs.get('station_name', ''),
+        'instrument_type': kwargs.get('instrument_type', ''),
     })
 
-    # Add station_name and instrument_type as variables if provided
-    if 'station_name' in kwargs:
-        ds.coords['station_name'] = ((), kwargs['station_name'])
-        ds['station_name'].attrs = {
-            'long_name': "GLOB 25 pyranometers"
-            }
-    if 'instrument_type' in kwargs:
-        ds.coords['instrument_type'] = ((), kwargs['instrument_type'])
-        ds['instrument_type'].attrs = {
-            'long_name': "25 pyranometers Apogee",
-            } 
-
     return ds
+
+def convert_int64_to_int32(ds):
+    """
+    Convert all int64 variables in the dataset to int32 for THREDDS compatibility.
+    """
+    for var in ds.data_vars:
+        if ds[var].dtype == 'int64':
+            ds[var] = ds[var].astype('int32')
+    return ds
+
+def save_to_netcdf(ds, output_file):
+    """
+    Save the xarray Dataset to a NetCDF file.
+    """
+    # Convert int64 to int32 for THREDDS compatibility
+    ds = convert_int64_to_int32(ds)
+    for attr in ['calendar', 'units']:
+        if attr in ds['Timestamp'].attrs:
+            del ds['Timestamp'].attrs[attr]
+
+    ds.to_netcdf(output_file, mode='w', format='NETCDF4', engine='h5netcdf')
 
 # %% ---- Process Data ---- #
 glob_file_2025 =  DATA_PATH / "GLOB_data" / "GLOB_data_30sec_2025_NYA.dat"
@@ -270,7 +406,7 @@ df_bsrn.index = df_bsrn.index.tz_localize('UTC')
 
 df = substitute_ghi_ground(df, df_bsrn) # Substitute the ground reflection with BSRN data between 2025-05-09 and 2025-08-21
 
-ds = convert_df_to_xarray_with_metadata(df)
+ds = convert_df_to_xarray_with_metadata(df, latitude, longitude)
 ds = add_solar_angles_and_coordinates(ds, fct, latitude, longitude)
 ds = compute_and_filter_albedo(ds)
 
@@ -291,8 +427,8 @@ geospatial_lat_min='78.92240',
 geospatial_lat_max='78.92240',
 geospatial_lon_min='11.92174',
 geospatial_lon_max='11.92174',
-time_coverage_start='2025-03-15',
-time_coverage_end='2025-09-05',
+time_coverage_start='2025-03-15T10:15:30',
+time_coverage_end='2025-09-05T23:59:30',
 history='- We created the file using netCDF4 in Python.',
 comments='The albedo component was calculated with two upward and downward Apogee \
 pyranometers from GLOB. But, between 2025-05-09 and 2025-08-22 the ground GHI \
@@ -317,8 +453,9 @@ instrument_type='Apogee SP-110'
 )
    
 save_to_netcdf(ds, output_file)
+print(f"{f}-minute NetCDF file created at: {output_file}")
+# Print the dataset period
+print('The ncdf dataset is from', str(ds['Timestamp'].values[0])[0:19], 'to'
+      , str(ds['Timestamp'].values[-1])[0:19])
 
-# Print variables in the dataset
-print('The ncdf dataset is from ', str(ds['Timestamp'].values[0])[0:10], 'to'
-      , str(ds['Timestamp'].values[-1])[0:10])
-
+ds.close();
