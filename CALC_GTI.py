@@ -39,17 +39,19 @@ pyrano_vars = [
     ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
     ]
 
-# pyrano_vars = [
-#     ['GHI', 'N_90', 'N_45'],
-#     ['GHI', 'E_45', 'W_45'],
-#     ['GHI', 'S_45', 'W_45'],
-#     ['GHI', 'E_45', 'W_45']] 
+pyrano_vars = [
+    ['GHI', 'N_90', 'N_45'],
+    ['GHI', 'E_45', 'N_45'],
+    ['GHI', 'S_45', 'W_45'],
+    ['GHI', 'E_45', 'W_45']] 
+pyrano_vars = [
+    ['GHI', 'E_45', 'N_45']] 
 
 
 ### Define the date range with timezone-aware datetime objects
 if year == 2023: start_date, end_date = (f'{year}-03-14', f'{year}-10-13') 
 if year == 2024: start_date, end_date = (f'{year}-04-14', f'{year}-10-13') 
-if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31') 
+if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-09-05') 
 
 ### Define the range of tilt and azimuth angles
 tilt_angles_calc = np.arange(0, 181, 5)
@@ -156,7 +158,7 @@ bsrn_data_full = pd.read_csv(bsrn_datafile, sep='\t', skiprows=24,
 bsrn_data_full.index = bsrn_data_full.index.tz_localize('UTC')
 bsrn_data_full = bsrn_data_full.rename_axis('Timestamp')
 bsrn_data_full = bsrn_data_full.resample(f'{f}min').first()
-if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31') 
+if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-09-05') 
 bsrn_data_full = bsrn_data_full.loc[start_date:end_date]
 
 lat_nya = 78.922700; lon_nya = 11.927300

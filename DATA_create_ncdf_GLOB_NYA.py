@@ -36,10 +36,18 @@ def read_and_preprocess_data(file_path):
     df.replace(-9999, np.nan, inplace=True)
 
     # Convert 'Timestamp' column to datetime and set it as index
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'].values, unit='ns')
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
     df.set_index('Timestamp', inplace=True)
 
     return df
+
+def resample_data(df, frequency):
+    """
+    Resample data to a specified frequency and compute the mean.
+    """
+    df.index = df.index + pd.Timedelta(minutes=frequency / 2)
+    resampled_df = df.resample(f'{frequency}min').mean()
+    return resampled_df
 
 def convert_df_to_xarray_with_metadata(resampled_df, latitude, longitude):
     """
@@ -53,11 +61,14 @@ def convert_df_to_xarray_with_metadata(resampled_df, latitude, longitude):
     """
     # Convert DataFrame to Xarray Dataset
     ds = xr.Dataset.from_dataframe(resampled_df)
-    timestamps_ds = pd.to_datetime(ds['Timestamp']).astype('datetime64[ns]').tz_localize('UTC')
+    timestamps_ds = pd.to_datetime(ds['Timestamp']).tz_localize('UTC')
+    timestamps_ds = timestamps_ds.astype('int64') / 1e9
+
     ds['Timestamp'] = timestamps_ds.values
     ds['Timestamp'].attrs.update({
         'calendar': 'gregorian',
         'long_name': 'UTC time',
+        'units':  'seconds since 1970-01-01T00:00:00Z',
         'standard_name': 'time',
     })
     ds = ds.drop_duplicates(dim='Timestamp')
@@ -204,11 +215,6 @@ def convert_df_to_xarray_with_metadata(resampled_df, latitude, longitude):
             'standard_name': 'solar_irradiance',
             'units': 'W m-2',
         },
-        'albedo': {
-            'long_name': 'Surface albedo',
-            'standard_name': 'surface_albedo',
-            'units': '1',
-        },
     }
     
     # Add latitude and longitude as scalar coordinates
@@ -237,16 +243,25 @@ def add_solar_angles_and_coordinates(ds, fct, latitude, longitude):
     """
 
     # Calculate solar angles
-    timestamps_ds = pd.to_datetime(ds['Timestamp']).astype('datetime64[ns]').tz_localize('UTC')
+    timestamps_ds = pd.to_datetime(ds['Timestamp'], unit='ns').tz_localize('UTC')
     solar_angles = fct.calculate_solar_angles(timestamps_ds, latitude, longitude)
+    solar_angles_not_standard = solar_angles[['declination','equation_of_time', 'hour_angle', 'apparent_elevation', 'apparent_zenith']]
+    solar_angles_standard = solar_angles.drop(columns=['declination','equation_of_time', 'hour_angle', 'apparent_elevation', 'apparent_zenith'])
 
     # Add solar angles to the dataset
-    for var, values in solar_angles.items():
+    for var, values in solar_angles_standard.items():
         ds[var] = (('Timestamp',), values.values)
         ds[var].attrs.update({
             'units': 'degrees',
             'long_name': f'Solar {var.replace("_", " ")}',
-            'standard_name': 'solar' + var
+            'standard_name': 'solar_' + var + '_angle'
+        })
+        
+    for var, values in solar_angles_not_standard.items():
+        ds[var] = (('Timestamp',), values.values)
+        ds[var].attrs.update({
+            'units': 'degrees',
+            'long_name': f'Solar {var.replace("_", " ")}',
         })
 
 
@@ -265,9 +280,11 @@ def compute_and_filter_albedo(ds):
     # Compute albedo and filter valid values (0 <= albedo <= 1)
     albedo = ds['GHI_ground'] / ds['GHI']
     albedo = albedo.where((albedo >= 0) & (albedo <= 1))
-
+    albedo_time = pd.to_datetime(albedo.indexes['Timestamp'], unit='ns')
+    albedo['Timestamp'] = albedo_time
+    
     # Filter the albedo data between 10:00 and 12:00 for each day
-    filtered_albedo = albedo.where((albedo.indexes['Timestamp'].hour >= 10) & (albedo.indexes['Timestamp'].hour < 12))
+    filtered_albedo = albedo.where((albedo_time.hour >= 10) & (albedo_time.hour < 12))
     filtered_albedo = filtered_albedo.sortby('Timestamp')
     # Group by day and calculate the mean albedo for each day
     daily_mean_albedo = filtered_albedo.resample(Timestamp='1D').mean(skipna=True)
@@ -328,6 +345,7 @@ def add_global_attributes(ds, **kwargs):
         'title': kwargs.get('title', ''),
         'summary': kwargs.get('summary', ''),
         'keywords': kwargs.get('keywords', ''),
+        'keywords_vocabulary': kwargs.get('keywords_vocabulary', ''),
         'Conventions': kwargs.get('Conventions', 'CF-1.8, ACDD-1.3'),
         'data_type': kwargs.get('data_type', 'netCDF-4'),
         'geospatial_lat_min': kwargs.get('geospatial_lat_min', ''),
@@ -356,6 +374,7 @@ def add_global_attributes(ds, **kwargs):
         'publisher_type': kwargs.get('publisher_type', 'institution'),
         'station_name': kwargs.get('station_name', ''),
         'instrument_type': kwargs.get('instrument_type', ''),
+        'reference': kwargs.get('reference', ''),
     })
 
     return ds
@@ -375,9 +394,6 @@ def save_to_netcdf(ds, output_file):
     """
     # Convert int64 to int32 for THREDDS compatibility
     ds = convert_int64_to_int32(ds)
-    for attr in ['calendar', 'units']:
-        if attr in ds['Timestamp'].attrs:
-            del ds['Timestamp'].attrs[attr]
 
     ds.to_netcdf(output_file, mode='w', format='NETCDF4', engine='h5netcdf')
 
@@ -385,7 +401,7 @@ def save_to_netcdf(ds, output_file):
 glob_file_2025 =  DATA_PATH / "GLOB_data" / "GLOB_data_30sec_2025_NYA.dat"
 bsrn_file_2025 =  DATA_PATH / "NYA_BSRN_data" / "NYA_radiation_2025-all.tab"
 latitude=78.92240; longitude=11.92174 # Ny-Ålesund
-f =10 # minute
+f = .5 # minute
 
 # Load data
 df = read_and_preprocess_data(glob_file_2025)
@@ -394,8 +410,7 @@ df_bsrn = pd.read_csv(bsrn_file_2025, sep='\t', skiprows=24, parse_dates=['Date/
 # Resample to f-minute intervals 
 if f > 1: 
     freq = f'{f} minutes'
-    df.index = df.index + pd.Timedelta(minutes=f/2)
-    df = df.resample(f'{f}min').mean()
+    df = resample_data(df, f)
     df_bsrn = df_bsrn.resample(f'{f}min').first()
     output_file =  DATA_PATH / "GLOB_data" / f"GLOB_data_{f}min_2025.nc"
 else: 
@@ -423,6 +438,7 @@ the solar angles associated to each timestamp, calculated with pvlib.',
 keywords='GCMDSK: EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC RADIATION > SHORTWAVE RADIATION, '
 'GCMDLOC: GEOGRAPHIC REGION > POLAR, \
 GCMDLOC: CONTINENT > EUROPE > NORTHERN EUROPE > SCANDINAVIA > NORWAY',
+keywords_vocabulary='GCMDSK: GCMD Science Keywords, GCMDLOC: GCMD Location',
 geospatial_lat_min='78.92240',
 geospatial_lat_max='78.92240',
 geospatial_lon_min='11.92174',
@@ -449,7 +465,8 @@ publisher_institution='Norwegian Meteorological Institute',
 publisher_url='https://adc.met.no',
 publisher_email='adc-support@met.no',
 station_name='GLOB Ny-Ålesund',
-instrument_type='Apogee SP-110'
+instrument_type='Apogee SP-110',
+reference='https://doi.org/123/abc (Developped in Python. Citation: ...[to come])'
 )
    
 save_to_netcdf(ds, output_file)

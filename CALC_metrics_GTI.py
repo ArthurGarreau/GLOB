@@ -24,26 +24,30 @@ Date: May 30, 2025
 import pandas as pd
 import xarray as xr
 import numpy as np
-from config_path import DATA_PATH, GTI_DATA_PATH
+from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
 # Parameters
 method = 'linear'; year = 2025; f = 10 #min data frequency
 
 ############################## File Paths #####################################
-glob_datafile = DATA_PATH / "GLOB_data"  / f"GLOB_data_10min_{year}.nc"
+glob_datafile = DATA_PATH / "GLOB_data" / f"GLOB_data_10min_{year}.nc"
 
-output_file = DATA_PATH / "Estim_GTI"  / f"{year}_error_GTI_{method}.xlsx"
+output_file = DATA_PATH / "Estim_GTI" / f"{year}_error_GTI_{method}.xlsx"
 ###############################################################################
     
 results_df = pd.DataFrame()
 for idx, pyr_nr in enumerate([3, 5, 9, 13, 25]):
     pyrano_var = np.zeros(pyr_nr)
-    GTI_estimation_datafile = GTI_DATA_PATH / \
+    GTI_estimation_datafile = DATA_PATH / "Estim_GTI" / \
         f"{year}_estimation_GTI_{f}min_{method}_{pyr_nr}pyrano.csv"
     if pyr_nr == 3:
-        GTI_estimation_datafile = GTI_DATA_PATH / \
-            f"{year}_estimation_GTI_{f}min_{method}_['GHI', 'E_45', 'N_45']pyrano.csv"
+        if method == 'nonlinear':
+            GTI_estimation_datafile = DATA_PATH / "Estim_GTI" / \
+                f"{year}_estimation_GTI_{f}min_{method}_['GHI', 'N_90', 'N_45']pyrano.csv"
+        if method == 'linear':
+            GTI_estimation_datafile = DATA_PATH / "Estim_GTI" / \
+                f"{year}_estimation_GTI_{f}min_{method}_['GHI', 'E_45', 'N_45']pyrano.csv"
     # Determine validation pyranometers
     removed_pyrano = fct.find_content_between_braces(GTI_estimation_datafile, line_number=4)
     validation_pyrano = [
@@ -54,7 +58,7 @@ for idx, pyr_nr in enumerate([3, 5, 9, 13, 25]):
     GTI_estimation_label = fct.create_gti_estimation_label(validation_pyrano)
 
     # Load the data
-    glob_data = xr.open_dataset(glob_datafile).to_dataframe()
+    glob_data = fct.read_netcdf(glob_datafile).to_dataframe()
     GTI_estimation_data = pd.read_csv(GTI_estimation_datafile, sep='\t', parse_dates=True, index_col='Timestamp', header=10)
 
     # Metric calculation functions
@@ -144,7 +148,7 @@ validation_pyrano = [
 GTI_estimation_label = fct.create_gti_estimation_label(validation_pyrano)
 
 # Load the data
-glob_data = xr.open_dataset(glob_datafile).to_dataframe()
+glob_data =  fct.read_netcdf(glob_datafile).to_dataframe()
 GTI_estimation_data = pd.read_csv(GTI_estimation_datafile, sep='\t', parse_dates=True, index_col='Timestamp', header=10)
 
 # Metric calculation functions

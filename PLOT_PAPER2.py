@@ -48,7 +48,7 @@ pyrano_nr= 25; method = "nonlinear"
 B_D_estimations_datafile = DATA_PATH / "Estim_Beam_Diffuse" / \
     f"2025_estimation_beam_diffuse_10min_{method}_{pyrano_nr}pyrano_test.csv"
 glob_datafile = DATA_PATH / "GLOB_data" / "GLOB_data_10min_2025.nc"
-bsrn_datafile = DATA_PATH / "BSRN_NYA_data" / "NYA_radiation_2025-all.tab"
+bsrn_datafile = DATA_PATH / "NYA_BSRN_data" / "NYA_radiation_2025-all.tab"
 
 # --- Helper Functions ---
 def round_up_to_hundred(x):
@@ -152,7 +152,7 @@ plt.tight_layout()
 # Moreover, this code enables saving the data from the plot in a .csv file.
 
 gti_estimation_datafile = DATA_PATH / "Estim_GTI" / \
-    "2023-24_estimation_GTI_10min_nonlinear_5pyrano.csv"
+    "2023-24_estimation_GTI_10min_nonlinear_25pyrano.csv"
 # --- Load GTI Data ---
 gti_data = pd.read_csv(gti_estimation_datafile, sep='\t', parse_dates=True, index_col='Timestamp', header=10)
 gti_data = gti_data[~gti_data.index.duplicated(keep='first')]
@@ -287,11 +287,13 @@ all_months_pivot = all_months_pivot.round()
 # Save to CSV
 all_months_pivot.to_csv(FIG_PATH / "Figure_high_res" / 'Figure 5-6.csv', sep='\t',index=False)
 
-# %% Fig 7-8: Average GTI in 2023-24 on monofacial and bifacial
+# %% Fig 7: Average estim GTI in 2023-24 on monofacial and bifacial
 # -----------------------------------------------------------
 # This section creates polar heatmaps showing annual averages of GTI for monofacial and bifacial configurations
 glob_data_file = DATA_PATH / "GLOB_data" / "GLOB_data_10min_2023-24.nc"
-
+gti_estimation_datafile= DATA_PATH / "Estim_GTI" / \
+    "2023-24_estimation_GTI_10min_nonlinear_5pyrano.csv"
+    
 # --- Load Data ---
 gti_data = pd.read_csv(gti_estimation_datafile, sep='\t', parse_dates=True, index_col='Timestamp', header=10)
 
@@ -308,7 +310,7 @@ azimuth_angles = np.array([0, 45, 90, 135, 180, 225, 270, 315, 360])
 # Define the inclination angles
 inclination_angles = np.arange(0, 95, 5)  # Different sets of inclination angles
 
-titles = ['(a) Monofacial\n     sky-facing\n     planes', '(b) Bifacial']
+titles = ['(a) Monofacial\n     sky-facing\n     planes', '(b) Bifacial\n     planes']
 fig = plt.figure(figsize=(12,6))
 gs = GridSpec(1, 3, figure=fig, width_ratios=[1, 1, 0.05])  # Allocate space for the colorbar
 
@@ -344,46 +346,54 @@ for idx, title in enumerate(titles):
     # Plot with improved color scaling
     contour = ax.contourf(theta, r, irradiance_avg, cmap='gnuplot2', levels=np.arange(0, 395, 5), alpha=1)
     contour_lines = ax.contour(theta, r, irradiance_avg, colors='white', linewidths=0.8, levels=levels, zorder=1)
-    ax.clabel(contour_lines, inline_spacing=0.1, fontsize=10, manual=True, fmt='%1.0f')
+    ax.clabel(contour_lines, inline_spacing=0.1, fontsize=12, manual=True, fmt='%1.0f')
     ax.set_xticks(np.radians(azimuth_angles))
-    ax.set_xticklabels(azimuth_orientations, fontsize=12)
+    ax.set_xticklabels(azimuth_orientations, fontsize=14)
     ax.set_yticks(inclination_angles[0::2])
-    ax.set_yticklabels(inclination_angles[0::2], fontsize=12)
+    ax.set_yticklabels(inclination_angles[0::2], fontsize=14)
     ax.set_rlabel_position(150)
     ax.spines['polar'].set_color('black')
     ax.tick_params(axis='both', colors='black')
-    ax.text(np.radians(150), inclination_angles[-1] + 10, "Tilt angle [°]")
-    ax.set_title(title, fontsize = 12, fontweight= "bold", loc='left', bbox=dict(facecolor='k', alpha=0.2))
+    ax.text(np.radians(150), inclination_angles[-1] + 10, "Tilt angle [°]", fontsize=14)
+    ax.set_title(title, fontsize = 14, fontweight= "bold", loc='left')
 
 cbar_ax = fig.add_subplot(gs[2])
 cbar = fig.colorbar(contour, cax=cbar_ax)
 cbar.set_ticks(np.arange(0, 420, 30))
-fig.text(0.05, 0.95, "GLOB 5 pyranometers nonlinear estimations (2023-2024)", fontsize = 16, fontweight= "bold")
-cbar.set_label(label='Irradiance [$W \ m^{-2}$]', size=14)  # Adjust the size as needed
+fig.text(0.805, 0.88, "Estimated GTI", fontsize = 14)
+cbar.set_label(label='[$W \ m^{-2}$]', size=14) # Adjust the size as needed
 cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
 # Save and show the monthly plot
-fig.savefig(FIG_PATH / "Figure_all" / "annual_avg_polar_heatmap_GLOB_estim_2023-24.png", dpi=300, bbox_inches='tight')
-fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 7.png", dpi=300, bbox_inches='tight')
-fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 7.pdf", format='pdf', bbox_inches='tight')
+# fig.savefig(FIG_PATH / "Figure_all" / "annual_avg_polar_heatmap_GLOB_estim_2023-24.png", dpi=300, bbox_inches='tight')
+# fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 7.png", dpi=300, bbox_inches='tight')
+# fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 7.pdf", format='pdf', bbox_inches='tight')
 # plt.close()
 
-# %% Fig 8: GTI measured with GLOB
+# %% Fig 8: Average meas GTI in 2023-24 on monofacial and bifacial
 # -------------------------------
 # This section creates polar heatmaps showing annual averages of GTI based on actual GLOB measurements
 
 glob_data_file = DATA_PATH / "GLOB_data" / "GLOB_data_10min_2023-24.nc"
+gti_estimation_datafile= DATA_PATH / "Estim_GTI" / \
+    "2023-24_estimation_GTI_10min_nonlinear_5pyrano.csv"
+    
+# --- Load Data ---
+ds_glob = fct.read_netcdf(glob_data_file)
+df_glob = ds_glob.to_dataframe(); df_glob.index = df_glob.index.tz_localize('UTC')
+df_glob = df_glob.reindex(date_range, fill_value=np.nan)
+gti_data = pd.read_csv(gti_estimation_datafile, sep='\t', parse_dates=True, index_col='Timestamp', header=10)
+# We mask the glob values with the same NaN mask as in the estimations data
+# to perform the averaging on the same data.
+mask = df_estim['gti0_45'].isna()
+df_glob = df_glob[~mask]
 
 # Create the date ranges
 dates_2023 = pd.date_range('2023-04-01', '2023-09-30', freq='10min')
 dates_2024 = pd.date_range('2024-04-01', '2024-09-30', freq='10min')
 date_range = dates_2023.union(dates_2024); date_range = date_range.tz_localize('UTC')
 
-# --- Load Data ---
-ds_glob = fct.read_netcdf(glob_data_file)
-df_glob = ds_glob.to_dataframe(); df_glob.index = df_glob.index.tz_localize('UTC')
-df_glob = df_glob.reindex(date_range, fill_value=pd.NA)
 
 # Define azimuth orientations and angles
 azimuth_orientations = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW','N']
@@ -393,7 +403,7 @@ inclination_angles = np.array([0, 45, 90])
 # Initialize a grid to accumulate irradiance values
 theta, r = np.meshgrid(np.deg2rad(azimuth_angles), inclination_angles)
 irradiance_avg = np.zeros_like(theta, dtype=float)
-titles = ['(a) Monofacial\n     sky-facing\n     planes', '(b) Bifacial']
+titles = ['(a) Monofacial\n     sky-facing\n     planes', '(b) Bifacial\n     planes']
 fig = plt.figure(figsize=(12,6))
 gs = GridSpec(1, 3, figure=fig, width_ratios=[1, 1, 0.05])  # Allocate space for the colorbar
 
@@ -405,12 +415,11 @@ for idx, title in enumerate(titles):
             orientation_ref = fct.azimuth_to_orientation((azimuth + 180) % 360)
 
             if idx == 0:
-                levels = [150,200,210,215]
+                levels = [150,200,215]
                 if inclination == 0:
                     var_name = 'GHI'
                     var_name_ref = 'GHI_ground'
                     irradiance_avg[i, j] = np.nanmean(df_glob[var_name])
-
                 else:
                     var_name = f"{orientation}_{inclination}"
                     irradiance_avg[i, j] = np.nanmean(df_glob[var_name])
@@ -434,7 +443,7 @@ for idx, title in enumerate(titles):
     # Plot with improved color scaling
     contour = ax.contourf(theta, r, irradiance_avg, cmap='gnuplot2', levels=np.arange(0, 395, 5), alpha=1)
     contour_lines = ax.contour(theta, r, irradiance_avg, colors='white', linewidths=0.8, levels=levels, zorder=1)
-    ax.clabel(contour_lines, inline_spacing=0, manual=True, fontsize=10, fmt='%1.0f')
+    ax.clabel(contour_lines, inline_spacing=0, manual=True, fontsize=12, fmt='%1.0f')
     ax.set_xticks(np.radians(azimuth_angles))
     ax.set_xticklabels(azimuth_orientations, fontsize=12)
     ax.set_yticks(inclination_angles)
@@ -442,21 +451,21 @@ for idx, title in enumerate(titles):
     ax.set_rlabel_position(150)
     ax.spines['polar'].set_color('black')
     ax.tick_params(axis='both', colors='black')
-    ax.text(np.radians(150), inclination_angles[-1]+10, "Tilt angle (°)")
-    ax.set_title(title, fontsize = 12, fontweight= "bold", loc='left', bbox=dict(facecolor='k', alpha=0.2))
+    ax.text(np.radians(150), inclination_angles[-1]+10, "Tilt angle (°)", fontsize = 14)
+    ax.set_title(title, fontsize = 14, fontweight='bold', loc='left')
 
 cbar_ax = fig.add_subplot(gs[2])
 cbar = fig.colorbar(contour, cax=cbar_ax)
 cbar.set_ticks(np.arange(0, 420, 30))
-fig.text(0.05, 0.95, "GLOB measurements (2023-2024)", fontsize = 16, fontweight= "bold")
-cbar.set_label(label='Irradiance [$W \ m^{-2}$]', size=14)  # Adjust the size as needed
-cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
+fig.text(0.805, 0.88, "Measured GTI", fontsize = 14)
+cbar.set_label(label='[$W \ m^{-2}$]', size=14)  # Adjust the size as needed
+cbar.ax.tick_params(labelsize=14)  # Adjust the size as needed
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
 # Save the plot
-# fig.savefig(FIG_PATH / "Figure_all" / "annual_avg_polar_heatmap_GLOB_meas_2023-24.png", dpi=300, bbox_inches='tight')
-# fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 8.png", dpi=300, bbox_inches='tight')
-# fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 8.pdf", format='pdf', bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_all" / "annual_avg_polar_heatmap_GLOB_meas_2023-24.png", dpi=300, bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 8.png", dpi=300, bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 8.pdf", format='pdf', bbox_inches='tight')
 # plt.close()
 
 # %% Fig 9: Most used pyranometers for estimations with a combination of 3
@@ -583,6 +592,209 @@ cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
 # Adjust layout to prevent overlap
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 # fig.savefig(FIG_PATH / "Figure_all" / "Most_used_pyrano3.png", dpi=300, bbox_inches='tight')
+# fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 9.png", dpi=300, bbox_inches='tight')
+# fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 9.pdf", format='pdf', bbox_inches='tight')
+# plt.close()
+
+
+
+# %% Fig 9: Most used pyranometers for estimations with a combination of 3 (Polar Heatmap)
+# ------------------------------------------------------------------------
+import matplotlib.colors as colors
+# --- Load Data ---
+beam_diffuse_datafile = DATA_PATH / "Estim_Beam_Diffuse" / "2025_bestestimation_beam_diffuse_10min_linear.csv"
+data = pd.read_csv(beam_diffuse_datafile, parse_dates=['Timestamp'], index_col='Timestamp', sep='\t', header=10)
+
+# Define the cardinal directions and tilt angles
+cardinal_directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'GHI']
+tilt_angles = [15, 45, 90]  # Add 15° for GHI
+
+# Map cardinal directions to angles (in radians), sorted
+direction_to_angle = {
+    'N': np.pi/2, 'NE': np.pi/4, 'E': 0,
+    'SE': 7*np.pi/4, 'S': 3*np.pi/2, 'SW': 5*np.pi/4,
+    'W': np.pi, 'NW': 3*np.pi/4
+}
+
+# Sort directions by angle
+sorted_directions = sorted(direction_to_angle.keys(), key=lambda x: direction_to_angle[x])
+sorted_angles = [direction_to_angle[dir] for dir in sorted_directions]
+
+# Create a meshgrid for polar coordinates, sorted
+theta = np.array(sorted_angles)
+r = np.array(tilt_angles)
+T, R = np.meshgrid(theta, r)
+norm = colors.BoundaryNorm(boundaries=np.arange(0,15,1), ncolors=256)
+
+# Create a figure with a 4x3 layout
+fig = plt.figure(figsize=(10, 12))
+plt.rcParams['font.size'] = 12
+gs = GridSpec(4, 3, figure=fig, width_ratios=[1, 1, 1], height_ratios=[1, 1, 1, 0.1])
+
+# Loop through each 3-hour period (8 plots in the first 3 rows)
+for i in range(8):
+    row = i // 3
+    col = i % 3
+    ax = fig.add_subplot(gs[row, col], polar=True)
+
+    start_hour = i * 3
+    end_hour = (i * 3 + 3) % 24
+    start_time = f"{start_hour:02d}:00"
+    end_time = f"{end_hour:02d}:00"
+
+    filtered_data = data.between_time(start_time, end_time)
+    combinations = filtered_data['Pyrano_Combination']
+
+    combination_counts = {}
+    ghi_count = 0
+    for combo_list in combinations:
+        if isinstance(combo_list, str):
+            combo_list = combo_list.replace("'", "").strip("()")
+            combos = combo_list.split(", ")
+            for combo in combos:
+                if combo == 'GHI':
+                    ghi_count += 1
+                if combo in combination_counts:
+                    combination_counts[combo] += 1
+                else:
+                    combination_counts[combo] = 1
+
+    # Initialize heatmap data with GHI row
+    heatmap_data = np.zeros((len(tilt_angles), len(cardinal_directions)-1))
+
+    # Populate heatmap data for tilt angles 45° and 90°
+    for combo, count in combination_counts.items():
+        if combo != 'GHI':
+            direction, angle = combo.split('_')
+            angle = int(angle)
+            if direction in cardinal_directions and angle in [45, 90]:
+                dir_index = cardinal_directions.index(direction)
+                angle_index = tilt_angles.index(angle)
+                heatmap_data[angle_index, dir_index] = count
+
+
+    if np.sum(heatmap_data) > 0:
+        heatmap_data = heatmap_data / np.sum(heatmap_data) * 100
+    # Add GHI average to the 15° row for all cardinal directions
+    if ghi_count > 0 and np.sum(list(combination_counts.values())) > 0:
+        ghi_percentage = (ghi_count / np.sum(list(combination_counts.values()))) * 100
+        heatmap_data[0, :] = ghi_percentage  # 15° row
+
+    # Sort directions and reorder data
+    heatmap_data_sorted = np.zeros((len(tilt_angles), len(sorted_directions)))
+    for j, dir in enumerate(sorted_directions):
+        dir_index = cardinal_directions.index(dir)
+        heatmap_data_sorted[:, j] = heatmap_data[:, dir_index]
+
+    # Plot the polar heatmap
+    c = ax.pcolormesh(T, R, heatmap_data_sorted, cmap='viridis', norm=norm, shading='auto')
+
+    # Remove grid and circular labels
+    ax.set_thetagrids([])
+    ax.grid(False)
+    # Manually add N, E, W, S labels
+    ax.text(0, 0, 'GHI', ha='center', va='center', fontsize=12)
+
+    ax.text(np.pi/2, 100, 'N', ha='center', va='center', fontsize=12)
+    ax.text(0, 100, 'E', va='center',  fontsize=12)
+    ax.text(np.pi, 100, 'W', ha='right', va='center', fontsize=12)
+    ax.text(3*np.pi/2, 100, 'S', ha='center', va='center', fontsize=12)
+    
+    # Contour the sectors (draw lines at 0°, 45°, 90°, etc.)
+    for angle in np.arange(np.pi/8, 2*np.pi, np.pi/4):  # Every 45 degrees
+        ax.plot([angle, angle], [30, 90], color='w', linewidth=1)
+        ax.plot([angle, angle+np.pi/4], [30, 30], color='w', linewidth=1.5)
+        ax.plot([angle, angle+np.pi/4], [66.66, 66.66], color='w', linewidth=1.5)
+
+    # Set radial gridlines (only for r, not theta)
+    ax.set_rgrids(radii=[33, 66], labels=['45°', '90°'], angle=45, color='k', fontsize=12)
+    ax.set_title(f'\n\n({chr(97 + i)}) {start_time} - {end_time} UTC', fontsize=12, fontweight='bold', pad=20)
+    ax.set_rorigin(0)
+    ax.set_rlim(0, 90)
+
+# Create a horizontal polar subplot for the full day (spanning all 3 columns in the 4th row)
+ax_full_day = fig.add_subplot(gs[8], polar=True)
+
+combinations_full_day = data['Pyrano_Combination']
+
+combination_counts_full_day = {}
+ghi_count_full_day = 0
+for combo_list in combinations_full_day:
+    if isinstance(combo_list, str):
+        combo_list = combo_list.replace("'", "").strip("()")
+        combos = combo_list.split(", ")
+        for combo in combos:
+            if combo == 'GHI':
+                ghi_count_full_day += 1
+            if combo in combination_counts_full_day:
+                combination_counts_full_day[combo] += 1
+            else:
+                combination_counts_full_day[combo] = 1
+
+# Initialize heatmap data for full day with GHI row
+heatmap_data_full_day = np.zeros((len(tilt_angles), len(cardinal_directions)-1))
+
+# Populate heatmap data for tilt angles 45° and 90°
+for combo, count in combination_counts_full_day.items():
+    if combo != 'GHI':
+        direction, angle = combo.split('_')
+        angle = int(angle)
+        if direction in cardinal_directions and angle in [45, 90]:
+            dir_index = cardinal_directions.index(direction)
+            angle_index = tilt_angles.index(angle)
+            heatmap_data_full_day[angle_index, dir_index] = count
+
+
+if np.sum(heatmap_data_full_day) > 0:
+    heatmap_data_full_day = heatmap_data_full_day / np.sum(heatmap_data_full_day) * 100
+# Add GHI average to the 15° row for all cardinal directions
+if ghi_count_full_day > 0 and np.sum(list(combination_counts_full_day.values())) > 0:
+    ghi_percentage_full_day = (ghi_count_full_day / np.sum(list(combination_counts_full_day.values()))) * 100
+    heatmap_data_full_day[0, :] = ghi_percentage_full_day  # 15° row
+
+# Sort directions and reorder data
+heatmap_data_full_day_sorted = np.zeros((len(tilt_angles), len(sorted_directions)))
+for j, dir in enumerate(sorted_directions):
+    dir_index = cardinal_directions.index(dir)
+    heatmap_data_full_day_sorted[:, j] = heatmap_data_full_day[:, dir_index]
+
+# Plot the polar heatmap for the full day
+c_full_day = ax_full_day.pcolormesh(T, R, heatmap_data_full_day_sorted, cmap='viridis', norm=norm, shading='auto')
+
+# Remove grid and circular labels
+ax_full_day.set_thetagrids([])
+ax_full_day.grid(False)
+# Manually add N, E, W, S labels
+ax_full_day.text(0, 0, 'GHI', ha='center', va='center', fontsize=12)
+
+ax_full_day.text(np.pi/2, 100, 'N', ha='center', va='center', fontsize=12)
+ax_full_day.text(0, 100, 'E', va='center',  fontsize=14)
+ax_full_day.text(np.pi, 100, 'W', ha='right', va='center', fontsize=12)
+ax_full_day.text(3*np.pi/2, 100, 'S', ha='center', va='center', fontsize=12)
+
+# Contour the sectors (draw lines at 0°, 45°, 90°, etc.)
+for angle in np.arange(np.pi/8, 2*np.pi, np.pi/4):  # Every 45 degrees
+    ax_full_day.plot([angle, angle], [30, 90], color='w', linewidth=1)
+    ax_full_day.plot([angle, angle+np.pi/4], [30, 30], color='w', linewidth=1.5)
+    ax_full_day.plot([angle, angle+np.pi/4], [66, 66], color='w', linewidth=1.5)
+
+# Set radial gridlines (only for r, not theta)
+ax_full_day.set_rgrids(radii=[33, 66], labels=['45°', '90°'], angle=45, color='k', fontsize=12)
+ax_full_day.set_title('(i) Full day', fontsize=12, fontweight='bold', pad=20)
+ax_full_day.set_rorigin(0)
+ax_full_day.set_rlim(0, 90)
+
+# Add a horizontal colorbar at the bottom (using the last row)
+cbar_ax = fig.add_subplot(gs[3, :])
+cbar = fig.colorbar(c_full_day, cax=cbar_ax, orientation='horizontal')
+cbar.ax.tick_params(labelsize=12)
+cbar.ax.set_title('Most used pyranometers [%]', fontsize=12, pad=10, loc='center')
+
+# Adjust layout to prevent overlap
+plt.tight_layout(rect=[0.05, 0, 1, 1])
+
+# Uncomment to save the figure
+# fig.savefig(FIG_PATH / "Figure_all" / "Most_used_pyrano3_polar.png", dpi=300, bbox_inches='tight')
 # fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 9.png", dpi=300, bbox_inches='tight')
 # fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 9.pdf", format='pdf', bbox_inches='tight')
 # plt.close()

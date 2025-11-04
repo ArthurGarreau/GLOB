@@ -25,8 +25,8 @@ from config_path import DATA_PATH
 import pvlib
 
 # Parameters
-# method = 'linear'; year = 2025; f = 10 #min data frequency
-three_pyranometers = 'no'
+method = 'linear'; year = 2025; f = 10 #min data frequency
+three_pyranometers = 'yes'
 ############################## File Paths #####################################
 bsrn_datafile = DATA_PATH / "NYA_BSRN_data"  / "NYA_radiation_2025-all.tab"
     
@@ -35,7 +35,7 @@ if three_pyranometers == 'yes':
     output_file = DATA_PATH / "Estim_Beam_Diffuse" / f"{year}_error_beam_diffuse_{method}_3pyrano.xlsx"
     pyrano_vars = [
         ['GHI', 'N_90', 'N_45'],
-        ['GHI', 'E_45', 'W_45'],
+        ['GHI', 'E_45', 'N_45'],
         ['GHI', 'S_45', 'W_45'],
         ['GHI', 'E_45', 'W_45']] 
 else:
@@ -130,7 +130,7 @@ for idx, pyr_nr in enumerate(pyrano_vars):
     if three_pyranometers == 'yes':
         # Case with 3 pyranometers
         beam_diff_estim_datafile = DATA_PATH / "Estim_Beam_Diffuse" / \
-            f"{year}_error_beam_diffuse_{method}_{pyr_nr}.xlsx"
+            f"{year}_estimation_beam_diffuse_{f}min_{method}_{pyr_nr}pyrano.csv"
     else: 
         beam_diff_estim_datafile = DATA_PATH / "Estim_Beam_Diffuse" / \
             f"{year}_estimation_beam_diffuse_{f}min_{method}_{str(pyr_nr)}pyrano.csv"

@@ -181,7 +181,6 @@ def estimate_diffuse_beam(pyrano_var, glob_value, lat, lon, method='linear'):
     Returns:
         list: Estimated diffuse and beam irradiance, albedo, and error.
     """
-    lat=glob_value.latitude; lon=glob_value.longitude
     table_azim_incli = create_variable_table(pyrano_var)
     GTI_glob = np.asarray(glob_value[table_azim_incli.index], dtype=float)
 
@@ -348,7 +347,7 @@ def find_best_estimation(combs, glob_value, lat, lon, true_estimation, method='l
     """
     # Evaluate all combinations in parallel
     results = np.array(
-        Parallel(n_jobs=-1)(delayed(estimate_diffuse_beam_faiman)(
+        Parallel(n_jobs=-1)(delayed(estimate_diffuse_beam)(
             list(comb), glob_value, lat, lon, method
         ) for comb in combs)
     )
@@ -387,7 +386,7 @@ def calculate_D_and_B(I_0, cos_z, D_prime, B_prime):
         tuple: Estimated diffuse and beam irradiance.
     """
     a = 1
-    b = (I_0*cos_z - B_prime) - D_prime
+    b = (I_0 - B_prime)*cos_z - D_prime
     c = -D_prime * I_0 * cos_z
     # Calculate the discriminant
     discriminant = b**2 - 4*a*c
@@ -402,10 +401,10 @@ def calculate_D_and_B(I_0, cos_z, D_prime, B_prime):
         # Select the positive root
         if D1 > 0:
             D = D1
-            B = I_0 * (1 - D_prime / D)
+            B = I_0/cos_z * (1 - D_prime / D)
         elif D2 > 0:
             D = D2
-            B = I_0 * (1 - D_prime / D)
+            B = I_0/cos_z * (1 - D_prime / D)
         else:
             D, B = np.nan, np.nan
     return D, B
@@ -680,25 +679,28 @@ def read_netcdf(file_path):
         # Convert coordinates
         coords = {}
         for var in coord_names:
-            if var == "Timestamp":
-                # Manually decode the Timestamp
+            if var == "Timestamp" or var == "time":
+                # Manually decode the time
                 time_values = nc.variables[var][:]
                 time_units = nc.variables[var].units  # e.g., "minutes since 2025-03-15 09:20:00"
                 time_origin = pd.Timestamp(time_units.split("since")[1].strip())
-                time_delta = pd.to_timedelta(time_values, unit="min")
+                time_delta = pd.to_timedelta(time_values, unit='s')
                 time_coords = time_origin + time_delta
+                time_coords = time_coords.values.astype('datetime64[ns]')
+
                 coords[var] = xr.DataArray(
                     time_coords,
                     dims=nc.variables[var].dimensions,
                     attrs=nc.variables[var].__dict__,
                 )
+                
             else:
                 coords[var] = xr.DataArray(
                     nc.variables[var][:],
                     dims=nc.variables[var].dimensions,
                     attrs=nc.variables[var].__dict__,
                 )
-
+                
         # Convert data variables
         data_vars = {
             var: xr.DataArray(

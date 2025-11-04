@@ -42,22 +42,25 @@ pyrano_vars = [
     ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
     ]
 
-# pyrano_vars = [
-#     ['GHI', 'N_90', 'N_45'],
-#     ['GHI', 'E_45', 'W_45'],
-#     ['GHI', 'S_45', 'W_45'],
-#     ['GHI', 'E_45', 'W_45']]
+pyrano_vars = [
+    ['GHI', 'N_90', 'N_45'],
+    ['GHI', 'E_45', 'N_45'],
+    ['GHI', 'S_45', 'W_45'],
+    ['GHI', 'E_45', 'W_45']]
+
+pyrano_vars = [
+    ['GHI', 'E_45', 'N_45']]
 
 # Load GLOB data
 ds_glob = fct.read_netcdf(glob_datafile)
-lat_glob = float(ds_glob.latitude.values); lon_glob = float(ds_glob.longitude.values)
+lat_glob = float(ds_glob.lat.values); lon_glob = float(ds_glob.lon.values)
 
 # List to store all results
 all_results = []
 # Create a daily date range for the specified month and year
 if year == 2023: start_date, end_date = (f'{year}-03-14', f'{year}-10-13')
 if year == 2024: start_date, end_date = (f'{year}-04-14', f'{year}-10-13')
-if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31')
+if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-09-05')
 dates = pd.date_range(start=start_date, end=end_date, freq='D')
 
 for pyrano_var in pyrano_vars:
@@ -128,7 +131,7 @@ f"\
     
     ds_glob.close()
 
-# % Execute the error script.-
+# # % Execute the error script.-
 # if year == 2025:
 #     # Path to the script you want to run
 #     script_path = 'CALC_metrics_beam_diffuse.py'
