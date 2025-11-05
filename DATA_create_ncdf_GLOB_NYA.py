@@ -280,7 +280,7 @@ def compute_and_filter_albedo(ds):
     # Compute albedo and filter valid values (0 <= albedo <= 1)
     albedo = ds['GHI_ground'] / ds['GHI']
     albedo = albedo.where((albedo >= 0) & (albedo <= 1))
-    albedo_time = pd.to_datetime(albedo.indexes['Timestamp'], unit='ns')
+    albedo_time = pd.to_datetime(albedo.indexes['Timestamp'], unit='s')
     albedo['Timestamp'] = albedo_time
     
     # Filter the albedo data between 10:00 and 12:00 for each day

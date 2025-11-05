@@ -288,7 +288,7 @@ def compute_and_filter_albedo(ds, ds_KZ):
     mask = (daily_mean_albedo['Timestamp'] >= pd.Timestamp('2024-07-08')) & (daily_mean_albedo['Timestamp'] <= pd.Timestamp('2024-08-19'))
     daily_mean_albedo = daily_mean_albedo.where(~mask, 0.115) # Assumed value for the missing data period.
 
-    ds_timestamp = pd.to_datetime(ds.indexes['Timestamp'], unit='ns')
+    ds_timestamp = pd.to_datetime(ds.indexes['Timestamp'], unit='s')
     aux_var = ds['GHI']; aux_var['Timestamp'] = ds_timestamp
     new_albedo = xr.full_like(aux_var, np.nan)
     for day in daily_mean_albedo.Timestamp.values:
