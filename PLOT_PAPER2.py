@@ -44,9 +44,9 @@ from config_path import DATA_PATH, FIG_PATH
 
 # --- Parameters ---
 date_str = '2025-03-29'  # Date for analysis
-pyrano_nr= 25; method = "nonlinear"
+pyrano_nr= 5; method = "nonlinear"
 B_D_estimations_datafile = DATA_PATH / "Estim_Beam_Diffuse" / \
-    f"2025_estimation_beam_diffuse_10min_{method}_{pyrano_nr}pyrano_test.csv"
+    f"2025_estimation_beam_diffuse_10min_{method}_{pyrano_nr}pyrano.csv"
 glob_datafile = DATA_PATH / "GLOB_data" / "GLOB_data_10min_2025.nc"
 bsrn_datafile = DATA_PATH / "NYA_BSRN_data" / "NYA_radiation_2025-all.tab"
 
@@ -81,7 +81,7 @@ glob_estim_data = pd.read_csv(B_D_estimations_datafile,parse_dates=['Timestamp']
 # Load GHI data from NetCDF file
 ds_glob = fct.read_netcdf(glob_datafile)
 ghi_day = ds_glob['GHI'].to_dataframe()
-latitude, longitude = ds_glob.latitude.values, ds_glob.longitude.values
+latitude, longitude = ds_glob.lat.values, ds_glob.lon.values
 
 # --- Filter Data for Specific Date ---
 bsrn_data = bsrn_data.loc[date_str]
@@ -152,7 +152,7 @@ plt.tight_layout()
 # Moreover, this code enables saving the data from the plot in a .csv file.
 
 gti_estimation_datafile = DATA_PATH / "Estim_GTI" / \
-    "2023-24_estimation_GTI_10min_nonlinear_25pyrano.csv"
+    "2023-24_estimation_GTI_10min_nonlinear_5pyrano.csv"
 # --- Load GTI Data ---
 gti_data = pd.read_csv(gti_estimation_datafile, sep='\t', parse_dates=True, index_col='Timestamp', header=10)
 gti_data = gti_data[~gti_data.index.duplicated(keep='first')]
@@ -355,13 +355,12 @@ for idx, title in enumerate(titles):
     ax.spines['polar'].set_color('black')
     ax.tick_params(axis='both', colors='black')
     ax.text(np.radians(150), inclination_angles[-1] + 10, "Tilt angle [°]", fontsize=14)
-    ax.set_title(title, fontsize = 14, fontweight= "bold", loc='left')
+    ax.set_title(title, fontsize = 14, fontweight= "bold", loc='left', bbox=dict(facecolor='k', alpha=0.2))
 
 cbar_ax = fig.add_subplot(gs[2])
 cbar = fig.colorbar(contour, cax=cbar_ax)
 cbar.set_ticks(np.arange(0, 420, 30))
-fig.text(0.805, 0.88, "Estimated GTI", fontsize = 14)
-cbar.set_label(label='[$W \ m^{-2}$]', size=14) # Adjust the size as needed
+cbar.set_label(label='Estimated GTI [$W \ m^{-2}$]', size=14) # Adjust the size as needed
 cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
@@ -452,151 +451,20 @@ for idx, title in enumerate(titles):
     ax.spines['polar'].set_color('black')
     ax.tick_params(axis='both', colors='black')
     ax.text(np.radians(150), inclination_angles[-1]+10, "Tilt angle (°)", fontsize = 14)
-    ax.set_title(title, fontsize = 14, fontweight='bold', loc='left')
+    ax.set_title(title, fontsize = 14, fontweight='bold', loc='left', bbox=dict(facecolor='k', alpha=0.2))
 
 cbar_ax = fig.add_subplot(gs[2])
 cbar = fig.colorbar(contour, cax=cbar_ax)
 cbar.set_ticks(np.arange(0, 420, 30))
-fig.text(0.805, 0.88, "Measured GTI", fontsize = 14)
-cbar.set_label(label='[$W \ m^{-2}$]', size=14)  # Adjust the size as needed
+cbar.set_label(label='Measured GTI [$W \ m^{-2}$]', size=14)  # Adjust the size as needed
 cbar.ax.tick_params(labelsize=14)  # Adjust the size as needed
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
 # Save the plot
-fig.savefig(FIG_PATH / "Figure_all" / "annual_avg_polar_heatmap_GLOB_meas_2023-24.png", dpi=300, bbox_inches='tight')
-fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 8.png", dpi=300, bbox_inches='tight')
-fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 8.pdf", format='pdf', bbox_inches='tight')
+#fig.savefig(FIG_PATH / "Figure_all" / "annual_avg_polar_heatmap_GLOB_meas_2023-24.png", dpi=300, bbox_inches='tight')
+#fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 8.png", dpi=300, bbox_inches='tight')
+#fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 8.pdf", format='pdf', bbox_inches='tight')
 # plt.close()
-
-# %% Fig 9: Most used pyranometers for estimations with a combination of 3
-# ------------------------------------------------------------------------
-# This section creates heatmaps showing the most used pyranometer combinations
-# for 3-sensor configurations throughout the day
-
-# --- Load Data ---
-beam_diffuse_datafile = DATA_PATH / "Estim_Beam_Diffuse" / "2025_bestestimation_beam_diffuse_10min_linear.csv"
-data = pd.read_csv(beam_diffuse_datafile, parse_dates=['Timestamp'], index_col='Timestamp', sep='\t', header=10)
-
-# Define the cardinal directions and tilt angles
-cardinal_directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'GHI']
-tilt_angles = [45, 90]
-
-# Create a figure with a custom layout
-fig = plt.figure(figsize=(12, 14))
-plt.rcParams['font.size'] = 12
-gs = GridSpec(5, 3, figure=fig, width_ratios=[1, 1, 0.1])  # Allocate space for the colorbar
-subgrid_count = [0,3,6,9,1,4,7,10]
-
-# Loop through each 3-hour period
-for i in range(8):
-    start_hour = i * 3
-    end_hour = (i * 3 + 3) % 24
-    start_time = f"{start_hour:02d}:00"
-    end_time = f"{end_hour:02d}:00"
-    # Create subplot for each period
-    ax = fig.add_subplot(gs[subgrid_count[i]])
-    # Filter the data between the specified hours
-    filtered_data = data.between_time(start_time, end_time)
-    # Extract the Pyrano_Combination column
-    combinations = filtered_data['Pyrano_Combination']
-    # Initialize a dictionary to count the occurrences of each combination
-    combination_counts = {}
-    # Count the occurrences of each combination
-    for combo_list in combinations:
-        if isinstance(combo_list, str):
-            combo_list = combo_list.replace("'", "").strip("()")
-            combos = combo_list.split(", ")
-            for combo in combos:
-                if combo in combination_counts:
-                    combination_counts[combo] += 1
-                else:
-                    combination_counts[combo] = 1
-    # Create a matrix to represent the counts for the heatmap
-    heatmap_data = np.zeros((len(tilt_angles), len(cardinal_directions)))
-    # Populate the heatmap data matrix
-    for combo, count in combination_counts.items():
-        if combo != 'GHI':
-            direction, angle = combo.split('_')
-        else:
-            direction, angle = 'GHI', 90
-        angle = int(angle)
-        if direction in cardinal_directions and angle in tilt_angles:
-            dir_index = cardinal_directions.index(direction)
-            angle_index = tilt_angles.index(angle)
-            heatmap_data[angle_index, dir_index] = count
-    # Normalize the heatmap data
-    if np.sum(heatmap_data) > 0:
-        heatmap_data = heatmap_data / np.sum(heatmap_data) * 100
-    heatmap_data[0,-1]= np.nan
-    # Plot the heatmap
-    c = ax.imshow(heatmap_data, cmap='viridis', aspect='auto', vmin=0, vmax=10)
-    # Set the labels for the cardinal directions and tilt angles
-    ax.set_xticks(np.arange(len(cardinal_directions)))
-    ax.set_xticklabels(cardinal_directions)
-    ax.set_yticks(np.arange(len(tilt_angles)))
-    ax.set_yticklabels(tilt_angles)
-    # Set the title for the subplot
-    ax.set_title(f'({chr(97 + i)}) {start_time} - {end_time} UTC', fontsize=14, fontweight='bold')
-    if i < 4: ax.set_ylabel('Tilt angle [°]')
-
-# Create a larger subplot for the full day at the bottom spanning both columns
-ax_full_day = fig.add_subplot(gs[-1, 0:2])
-# Extract the Pyrano_Combination column for the full day
-combinations_full_day = data['Pyrano_Combination']
-# Initialize a dictionary to count the occurrences of each combination for the full day
-combination_counts_full_day = {}
-# Count the occurrences of each combination for the full day
-for combo_list in combinations_full_day:
-    if isinstance(combo_list, str):
-        combo_list = combo_list.replace("'", "").strip("()")
-        combos = combo_list.split(", ")
-        for combo in combos:
-            if combo in combination_counts_full_day:
-                combination_counts_full_day[combo] += 1
-            else:
-                combination_counts_full_day[combo] = 1
-# Create a matrix to represent the counts for the heatmap for the full day
-heatmap_data_full_day = np.zeros((len(tilt_angles), len(cardinal_directions)))-1
-# Populate the heatmap data matrix for the full day
-for combo, count in combination_counts_full_day.items():
-    if combo != 'GHI':
-        direction, angle = combo.split('_')
-    else:
-        direction, angle = 'GHI', 90
-    angle = int(angle)
-    if direction in cardinal_directions and angle in tilt_angles:
-        dir_index = cardinal_directions.index(direction)
-        angle_index = tilt_angles.index(angle)
-        heatmap_data_full_day[angle_index, dir_index] = count
-# Normalize the heatmap data for the full day
-if np.sum(heatmap_data_full_day) > 0:
-    heatmap_data_full_day = heatmap_data_full_day / np.sum(heatmap_data_full_day) * 100
-heatmap_data_full_day[0,-1]= np.nan
-# Plot the heatmap for the full day
-c_full_day = ax_full_day.imshow(heatmap_data_full_day, cmap='viridis', aspect='auto', vmin=0, vmax=10)
-# Set the labels for the cardinal directions and tilt angles for the full day
-ax_full_day.set_xticks(np.arange(len(cardinal_directions)))
-ax_full_day.set_xticklabels(cardinal_directions)
-ax_full_day.set_yticks(np.arange(len(tilt_angles)))
-ax_full_day.set_yticklabels(tilt_angles)
-# Set the title for the full day subplot
-ax_full_day.set_title('(i) Full Day', fontsize=16, fontweight='bold')
-ax_full_day.set_ylabel('Tilt angle [°]')
-
-# Add a single colorbar for the entire figure
-cbar_ax = fig.add_subplot(gs[1:4, 2])
-cbar = fig.colorbar(c_full_day, cax=cbar_ax)
-cbar.set_label(label='%', size=14)  # Adjust the size as needed
-cbar.ax.tick_params(labelsize=12)  # Adjust the size as needed
-
-# Adjust layout to prevent overlap
-plt.tight_layout(rect=[0, 0, 0.9, 0.95])
-# fig.savefig(FIG_PATH / "Figure_all" / "Most_used_pyrano3.png", dpi=300, bbox_inches='tight')
-# fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 9.png", dpi=300, bbox_inches='tight')
-# fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 9.pdf", format='pdf', bbox_inches='tight')
-# plt.close()
-
-
 
 # %% Fig 9: Most used pyranometers for estimations with a combination of 3 (Polar Heatmap)
 # ------------------------------------------------------------------------
@@ -788,13 +656,13 @@ ax_full_day.set_rlim(0, 90)
 cbar_ax = fig.add_subplot(gs[3, :])
 cbar = fig.colorbar(c_full_day, cax=cbar_ax, orientation='horizontal')
 cbar.ax.tick_params(labelsize=12)
-cbar.ax.set_title('Most used pyranometers [%]', fontsize=12, pad=10, loc='center')
+cbar.ax.set_title('Frequency of optimal plane usage for estimating beam and diffuse [%]', fontsize=12, pad=10, loc='center')
 
 # Adjust layout to prevent overlap
 plt.tight_layout(rect=[0.05, 0, 1, 1])
 
 # Uncomment to save the figure
 # fig.savefig(FIG_PATH / "Figure_all" / "Most_used_pyrano3_polar.png", dpi=300, bbox_inches='tight')
-# fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 9.png", dpi=300, bbox_inches='tight')
-# fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 9.pdf", format='pdf', bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 9.png", dpi=300, bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 9.pdf", format='pdf', bbox_inches='tight')
 # plt.close()

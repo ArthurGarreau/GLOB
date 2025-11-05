@@ -156,13 +156,12 @@ for idx, pyr_nr in enumerate(pyrano_vars):
     # Combine the DataFrames
     results_df = pd.concat([results_df, glob_df], ignore_index=True)
 
-
-erbs_df = calculate_metrics(beam_erbs, diffuse_erbs, 'Erbs')
 perez_df = calculate_metrics(beam_perez, diffuse_perez, 'Perez')
+erbs_df = calculate_metrics(beam_erbs, diffuse_erbs, 'Erbs')
 oh_df = calculate_metrics(beam_oh, diffuse_oh, 'Org_Hol')
 
 # Combine the DataFrames
-results_df = pd.concat([results_df, erbs_df, perez_df, oh_df], ignore_index=True)
+results_df = pd.concat([results_df, perez_df, erbs_df,  oh_df], ignore_index=True)
 
 # Write the results to a CSV file
 with open(output_file, 'w') as file:
