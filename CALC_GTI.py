@@ -27,7 +27,7 @@ import re
 from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
-method = 'linear'; year = 2025; f = 10 #min data frequency
+method = 'nonlinear'; year = 2025; f = 10 #min data frequency
 
 pyrano_vars = [
     ['GHI', 'N_45', 'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45', 'E_90', 'E_135',
@@ -39,14 +39,11 @@ pyrano_vars = [
     ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
     ]
 
-pyrano_vars = [
-    ['GHI', 'N_90', 'N_45'],
-    ['GHI', 'E_45', 'N_45'],
-    ['GHI', 'S_45', 'W_45'],
-    ['GHI', 'E_45', 'W_45']] 
-pyrano_vars = [
-    ['GHI', 'E_45', 'N_45']] 
-
+# pyrano_vars = [
+#     ['GHI', 'N_90', 'N_45'],
+#     ['GHI', 'E_45', 'N_45'],
+#     ['GHI', 'S_45', 'W_45'],
+#     ['GHI', 'E_45', 'W_45']] 
 
 ### Define the date range with timezone-aware datetime objects
 if year == 2023: start_date, end_date = (f'{year}-03-14', f'{year}-10-13') 
@@ -221,3 +218,5 @@ try:
     print(f"Results saved to\n {output_file}")
 except Exception as e:
     print(f"Error saving results for\n {output_file}: {e}")
+    
+################################ END ##########################################

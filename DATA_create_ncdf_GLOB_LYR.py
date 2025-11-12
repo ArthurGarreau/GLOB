@@ -241,7 +241,7 @@ def add_solar_angles_and_coordinates(ds, fct, latitude, longitude):
         - xarray Dataset with added latitude, longitude, and solar angles.
     """
 
-    timestamps_ds = pd.to_datetime(ds['Timestamp'], unit='ns').tz_localize('UTC')
+    timestamps_ds = pd.to_datetime(ds['Timestamp'], unit='s').tz_localize('UTC')
     solar_angles = fct.calculate_solar_angles(timestamps_ds, latitude, longitude)
     solar_angles_not_standard = solar_angles[['declination','equation_of_time', 'hour_angle', 'apparent_elevation', 'apparent_zenith']]
     solar_angles_standard = solar_angles.drop(columns=['declination','equation_of_time', 'hour_angle', 'apparent_elevation', 'apparent_zenith'])
@@ -350,7 +350,7 @@ def add_global_attributes(ds, **kwargs):
         'publisher_email': kwargs.get('publisher_email', ''),
         'publisher_type': kwargs.get('publisher_type', 'institution'),
         'station_name': kwargs.get('station_name', ''),
-        'reference': kwargs.get('reference', ''),
+        'references': kwargs.get('references', ''),
     })
 
 
@@ -412,13 +412,13 @@ merged_ds = compute_and_filter_albedo(merged_ds, ds_KZ)
 
 merged_ds = add_global_attributes(
 ds=merged_ds,
-title= 'Global tilted irradiance on 25 planes measured in Adventdalen (2023-24)',
+title= 'Global tilted irradiance on 25 planes measured in Longyearbyen (2023-24)',
 summary=f'This file includes a time series of global tilted irradiance (GTI) \
 measurements every {freq}, from 2023 to 2024 in the valley of Adventdalen, Svalbard.\n\
 The measurements were acquired with a 25-pyranometer array called GLOB, mounted \
-in the shape of rhombicuboctahedron. They consist of solar irradiance recorded \
+in the shape of a rhombicuboctahedron. They consist of solar irradiance recorded \
 with Apogee SP-110 pyranometers on 25 different planes.\n\
-Each GTI components is labeled with the format "azimuth_tilt". We also included \
+Each GTI component is labeled with the format "azimuth_tilt". We also included \
 the solar angles associated to each timestamp, calculated with pvlib.',
 keywords='GCMDSK: EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC RADIATION > SHORTWAVE RADIATION, \
 GCMDLOC: GEOGRAPHIC REGION > POLAR, \
@@ -450,7 +450,7 @@ publisher_url='https://adc.met.no',
 publisher_email='adc-support@met.no',
 station_name='GLOB Adventdalen',
 instrument_type='Apogee SP-110',
-reference='https://doi.org/123/abc (Developped in Python. Citation: ...[to come])'
+references='https://github.com/ArthurGarreau/GLOB (Software)'
 )
 
 save_to_netcdf(merged_ds, output_file)

@@ -219,7 +219,7 @@ def estimate_diffuse_beam(pyrano_var, glob_value, lat, lon, method='linear'):
             )
             D_prime, B_prime = results.x
         elif method == 'nonlinear':
-            initial_guess = [10, 10, 10]
+            initial_guess = [1, 1, 1]
             # Add bounds if applicable
             bounds = ([0, 0, 0], [np.inf, np.inf, np.inf])
             results = least_squares(
@@ -241,15 +241,13 @@ def estimate_diffuse_beam(pyrano_var, glob_value, lat, lon, method='linear'):
     I_0 = pvlib.irradiance.get_extra_radiation(glob_value.name) # glob_value.name = timestamp
     if not (np.isnan(D_prime) and np.isnan(B_prime)):
         D, B = calculate_D_and_B(I_0, cos_z, D_prime, B_prime)
-    # print('D_prime',np.round(D_prime),'B_prime', np.round(B_prime))
-    # print('D',np.round(D),'B', np.round(B))
 
     if B>0 and D>0 and zenith < 90:
         return [np.round(abs(D)), np.round(abs(B)), np.round(albedo, 2), np.round(D_prime), np.round(B_prime)]
     else:
         return [np.nan, np.nan, np.nan, np.nan, np.nan]
 
-def estimate_diffuse_beam_monte_carlo(variables, glob_value, lat, lon, n_simulations, error):
+def estimate_diffuse_beam_monte_carlo(pyrano_var, glob_value, lat, lon, n_simulations, error):
     """
     Modified estimate_diffuse_beam_faiman function for performing the Monte Carlo calculations.
     This function is made for calculating the error propagation of the 
@@ -267,7 +265,8 @@ def estimate_diffuse_beam_monte_carlo(variables, glob_value, lat, lon, n_simulat
     Returns:
         tuple: Estimated diffuse and beam irradiance.
     """
-    table_azim_incli = create_variable_table(variables)
+    
+    table_azim_incli = create_variable_table(pyrano_var)
     GTI_glob = np.asarray(glob_value[table_azim_incli.index], dtype=float)
     # Interpolate NaN values in GTI_glob
     # GTI_glob = pd.Series(GTI_glob).interpolate(method='linear').values
@@ -278,8 +277,9 @@ def estimate_diffuse_beam_monte_carlo(variables, glob_value, lat, lon, n_simulat
     # Necessary solar angles for the geometry calculation.
     # Can also be calculated with the function 'solar_angle_calculation'
     # if no in the initial dataset.
-    solar_angles = glob_value[['zenith','hour_angle', 'declination']] # necessary solar angles for the geometry calculation.
-
+    solar_angles = calculate_solar_angles(glob_value.name, lat, lon).squeeze()
+    # solar_angles = glob_value[['zenith','hour_angle', 'declination']] 
+    
     b = np.array(calculate_beam_coefficient(solar_angles, inclinations, azimuths, lat, lon))
     d = np.array(calculate_diffuse_coefficient(inclinations))
     r = np.array(calculate_reflected_coefficient(inclinations))
@@ -297,6 +297,7 @@ def estimate_diffuse_beam_monte_carlo(variables, glob_value, lat, lon, n_simulat
 
         for i in range(n_simulations):
             albedo_noisy = albedo * np.random.normal(1, error, size=1)
+            GTI_glob_noisy = GTI_glob * np.random.normal(1, error, size=1)
             initial_guess = [1, 1]
             # Add bounds if applicable
             bounds = ([0, 0], [np.inf, np.inf])
@@ -305,16 +306,17 @@ def estimate_diffuse_beam_monte_carlo(variables, glob_value, lat, lon, n_simulat
                 least_squares_residuals,
                 initial_guess,
                 bounds=bounds,
-                args=(b, d, r, GTI_glob, albedo_noisy),
-                max_nfev=1000  # Increase maximum number of function evaluations
+                # args=(b, d, r, GTI_glob, albedo_noisy),
+                args=(b, d, r, GTI_glob_noisy, albedo),
+                max_nfev=100  # Increase maximum number of function evaluations
             )
             D_prime, B_prime = results.x
             zenith = glob_value['zenith']  # degrees
             cos_z = np.cos(np.radians(zenith))
             I_0 = pvlib.irradiance.get_extra_radiation(glob_value.name) # glob_value.name = timestamp
-
             if not (np.isnan(D_prime) and np.isnan(B_prime)):
                 D, B = calculate_D_and_B(I_0, cos_z, D_prime, B_prime)
+                
                 if D > 1 and D < 1372 and B > 1 and B < 1372:
                     D_estimates[i] = D
                     B_estimates[i] = B        
@@ -427,7 +429,7 @@ def calculate_Dprime_and_Bprime(I_0, zenith, D, B):
     # Calculate B' using the formula
     B_prime = B * (cos_z + D/I_0)
     # Calculate D' using the formula
-    D_prime = D * (1 - B/I_0)
+    D_prime = D * (1 - B*cos_z/I_0)
     return D_prime, B_prime
 
 def calculate_GTI_for_orientations(

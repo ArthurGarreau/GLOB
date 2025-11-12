@@ -243,7 +243,7 @@ def add_solar_angles_and_coordinates(ds, fct, latitude, longitude):
     """
 
     # Calculate solar angles
-    timestamps_ds = pd.to_datetime(ds['Timestamp'], unit='ns').tz_localize('UTC')
+    timestamps_ds = pd.to_datetime(ds['Timestamp'], unit='s').tz_localize('UTC')
     solar_angles = fct.calculate_solar_angles(timestamps_ds, latitude, longitude)
     solar_angles_not_standard = solar_angles[['declination','equation_of_time', 'hour_angle', 'apparent_elevation', 'apparent_zenith']]
     solar_angles_standard = solar_angles.drop(columns=['declination','equation_of_time', 'hour_angle', 'apparent_elevation', 'apparent_zenith'])
@@ -374,7 +374,8 @@ def add_global_attributes(ds, **kwargs):
         'publisher_type': kwargs.get('publisher_type', 'institution'),
         'station_name': kwargs.get('station_name', ''),
         'instrument_type': kwargs.get('instrument_type', ''),
-        'reference': kwargs.get('reference', ''),
+        'references': kwargs.get('references', ''),
+        'acknowledgement': kwargs.get('acknowledgement', ''),
     })
 
     return ds
@@ -429,11 +430,11 @@ ds = add_global_attributes(
 ds=ds,
 title= 'Global tilted irradiance on 25 planes measured in Ny-Ålesund (2025)',
 summary=f'This file includes a time series of global tilted irradiance (GTI) \
-measurements every {freq}, in 2025 in Ny-Ålesund.\n\
+measurements every {freq}, in 2025 in Ny-Ålesund, Svalbard.\n\
 The measurements were acquired with a 25-pyranometer array called GLOB, mounted \
-in the shape of rhombicuboctahedron. They consist of solar irradiance recorded \
+in the shape of a rhombicuboctahedron. They consist of solar irradiance recorded \
 with Apogee SP-110 pyranometers on 25 different planes.\n\
-Each GTI components is labeled with the format "azimuth_tilt". We also included \
+Each GTI component is labeled with the format "azimuth_tilt". We also included \
 the solar angles associated to each timestamp, calculated with pvlib.',
 keywords='GCMDSK: EARTH SCIENCE > ATMOSPHERE > ATMOSPHERIC RADIATION > SHORTWAVE RADIATION, '
 'GCMDLOC: GEOGRAPHIC REGION > POLAR, \
@@ -466,7 +467,9 @@ publisher_url='https://adc.met.no',
 publisher_email='adc-support@met.no',
 station_name='GLOB Ny-Ålesund',
 instrument_type='Apogee SP-110',
-reference='https://doi.org/123/abc (Developped in Python. Citation: ...[to come])'
+references='https://github.com/ArthurGarreau/GLOB (Software)',
+acknowledgement='The fieldwork was funded by the Research Council of Norway \
+through the Arctic Field Grant (project number: 356439)'
 )
    
 save_to_netcdf(ds, output_file)

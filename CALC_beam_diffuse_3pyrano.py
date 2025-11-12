@@ -18,7 +18,6 @@ Date: May 30, 2025
 """
 
 # %% Load Libraries
-import xarray as xr
 import pandas as pd
 from datetime import datetime
 from config_path import DATA_PATH
@@ -31,7 +30,6 @@ pyrano_vars = [['GHI', 'N_90', 'N_45'],
                ['GHI', 'S_45', 'N_45'],
                ['GHI', 'E_45', 'W_45']]
 
-
 for pyrano_var in pyrano_vars:
     ############################## File Paths #####################################
     glob_datafile = DATA_PATH / "GLOB_data"  / f"GLOB_data_{f}min_{year}.nc"
@@ -43,7 +41,7 @@ for pyrano_var in pyrano_vars:
     # Load GLOB data
     ds_glob = fct.read_netcdf(glob_datafile)
 
-    lat_glob = float(ds_glob.latitude.values); lon_glob = float(ds_glob.longitude.values)
+    lat_glob = float(ds_glob.lat.values); lon_glob = float(ds_glob.lon.values)
     
     # List to store all results
     all_results = []
@@ -67,10 +65,10 @@ for pyrano_var in pyrano_vars:
             glob_value = df_glob_one_day.loc[timestamp]
 
             # Calculate the estimation based on the least square error method
-            new_result = fct.estimate_diffuse_beam_faiman(pyrano_var,
-                                                            glob_value,                                                            
-                                                            lat_glob, lon_glob,
-                                                            method=method)
+            new_result = fct.estimate_diffuse_beam(pyrano_var,
+                                                    glob_value,                                                            
+                                                    lat_glob, lon_glob,
+                                                    method=method)
             all_results.append([str(timestamp)] + new_result)
         print(date)
     
@@ -109,7 +107,4 @@ f"\
     
     ds_glob.close()
 
-    
-
-
-
+################################ END ##########################################

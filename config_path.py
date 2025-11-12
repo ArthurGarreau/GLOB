@@ -12,7 +12,7 @@ SCRIPT_PATH = Path(".")
 # Location to output plots
 FIG_PATH = SCRIPT_PATH / ".." / "FIGURES" 
 # Location to retrieve data for estimations
-DATA_PATH = SCRIPT_PATH / ".."  / "DATA" 
+DATA_PATH = SCRIPT_PATH / "DATA_toshare" 
 
 #### SECONDARY PATHS ####
 B_D_DATA_PATH = DATA_PATH / "Estim_Beam_Diffuse"
@@ -26,3 +26,6 @@ ALL_PLOT_PATH = FIG_PATH / "Figure_all"
 for path in [HIGH_RES_PLOT_PATH, LOW_RES_PLOT_PATH, ALL_PLOT_PATH,\
              B_D_DATA_PATH, GTI_DATA_PATH]:
     path.mkdir(parents=True, exist_ok=True)
+    
+
+################################ END ##########################################

@@ -18,7 +18,6 @@ Date: November 22, 2024
 """
 
 # %% Load Libraries
-import xarray as xr
 import pandas as pd
 import numpy as np
 from itertools import combinations
@@ -52,7 +51,7 @@ true_estimations = df_NYA[['DIF', 'DIR']]
 
 # Load GLOB data
 ds_glob = fct.read_netcdf(glob_datafile)
-lat_glob = float(ds_glob.latitude.values); lon_glob = float(ds_glob.longitude.values)
+lat_glob = float(ds_glob.lat.values); lon_glob = float(ds_glob.lon.values)
 
 # List to store all results
 all_results = []
@@ -122,4 +121,4 @@ df_all_results.to_csv(output_file, index=True, mode='a', sep='\t', na_rep='NaN',
 
 ds_glob.close()
 
-
+################################ END ##########################################

@@ -20,7 +20,6 @@ Date: July 29, 2024
 """
 
 # %% Load Libraries
-import xarray as xr
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
@@ -33,7 +32,7 @@ import glob_functions_calculation as fct
 
 method = 'linear'; year = 2024; f = 10 #min data frequency
 n_simulations = 500
-error = 0.1
+error = 0.01
 
 pyrano_vars = [['GHI', 'N_45', 'E_45', 'S_45', 'W_45'],
                ['GHI', 'N_45', 'N_90', 'N_135', 'E_45', 'E_90', 'E_135',
@@ -51,7 +50,7 @@ for pyrano_var in pyrano_vars:
     
     # Load GLOB data
     ds_glob = fct.read_netcdf(glob_datafile)
-    lat_glob = float(ds_glob.latitude.values); lon_glob = float(ds_glob.longitude.values)
+    lat_glob = float(ds_glob.lat.values); lon_glob = float(ds_glob.lon.values)
     
     # List to store all results
     all_results = []
@@ -78,7 +77,8 @@ for pyrano_var in pyrano_vars:
                                                             lat_glob, lon_glob,
                                                             n_simulations, error)
             
-            error_D_MC, error_B_MC = np.nanstd(D_MC)/np.nanmean(D_MC), np.nanstd(B_MC)/np.nanmean(B_MC)
+            error_D_MC = np.nanstd(D_MC) / np.nanmean(D_MC) if np.any(np.isfinite(D_MC)) else np.nan
+            error_B_MC = np.nanstd(B_MC) / np.nanmean(B_MC) if np.any(np.isfinite(B_MC)) else np.nan
             stat, p_D_MC = stats.shapiro(D_MC)
             stat, p_B_MC = stats.shapiro(B_MC)
             
@@ -127,3 +127,5 @@ for pyrano_var in pyrano_vars:
     df_all_results.to_csv(output_file, index=True, mode='a', sep='\t', na_rep='NaN', encoding='utf-8')
 
     ds_glob.close()
+    
+################################ END ##########################################

@@ -169,3 +169,5 @@ with open(output_file, 'w') as file:
 "on Ny-Alesund BSRN data.\n")
 results_df.to_excel(output_file, sheet_name='Sheet1', index=False)
 print(f"Results saved to {output_file}")
+
+################################ END ##########################################

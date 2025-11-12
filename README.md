@@ -2,7 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
-**GLOB** is a Python-based toolkit for analyzing solar irradiance data from a 26-pyranometer array (Apogee SP-110) deployed in Svalbard. This project is part of my PhD research at The University Centre in Svalbard, funded by RCN through the Arctic Field Grant (Grant nr. 940094, RiS ID 12666).
+**GLOB** is a Python-based toolkit for analyzing solar irradiance data from a 26-pyranometer array (Apogee SP-110) deployed in Svalbard. This project is part of a PhD research at The University Centre in Svalbard, partly funded by RCN through the Arctic Field Grant (project nr. 356439, RiS ID 12666) and the ZEESA project (project nr. 336342).
+
+The data from GLOB have been made publicly and freely available for this study on the Arctic Data Centre platform: https://adc.met.no/
 
 ---
 
@@ -112,21 +114,14 @@ The following table describes the **variable names in the NetCDF data files** fo
 ## Data Workflow
 
 ### 0. Change the path names 
-   In `config_path.py`, the paths need to be adapted to your working directory:
+   In `config_path.py`, the paths might need to be adapted to your working directory:
    - SCRIPT_PATH corresponds to the Python scripts location
    - DATA_PATH corresponds to the location of the data usefull for the estimations. The data can be downloaded on the GitHub repository.
    - PLOT_PATH corresponds to the export location of the necessary plots.
    Running `config_path.py`, creates automatically all the necessary folders
 
-### 1.1 Use Preprocessed Data (Recommended)
-  Preprocessed NetCDF data files are available for download from the **Arctic Data Centre** (link will be added soon). If you use these files, you can **skip the data preprocessing step** and directly proceed to irradiance estimation.
-
-### 1.2 Process Raw Data
-   Run `DATA_GLOB_csvdata.py` → `DATA_create_ncdf_*.py` to generate NetCDF files.
-   *(Note: This step is only necessary if you have raw CSV data.)*
-
 ### 2. Estimation
-   Use `CALC_beam_diffuse*.py` THEN `CALC_GTI.py` to estimate GTI, beam, and diffuse irradiance from NetCDF data.
+   Use `CALC_beam_diffuse*.py` THEN `CALC_GTI.py` to estimate GTI, beam, and diffuse irradiance from the NetCDF data stored in \DATA_toshare.
    *(~20 min/month of estimation)*
 
 ### 3. Error Analysis

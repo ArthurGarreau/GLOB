@@ -1,5 +1,4 @@
 # requirements.txt
-# ================
 #
 # This file lists the Python packages required to run the GLOB data processing and visualization scripts.
 # To install the dependencies, run:

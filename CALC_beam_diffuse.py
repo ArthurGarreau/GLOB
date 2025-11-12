@@ -24,7 +24,7 @@ from datetime import datetime
 from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
-method = 'linear'; year = 2025; f = 10 #min data frequency
+method = 'nonlinear'; year = 2025; f = 10 #min data frequency
 
 ############################## File Paths #####################################
 glob_datafile = DATA_PATH / "GLOB_data" / f"GLOB_data_{f}min_{year}.nc"
@@ -42,14 +42,11 @@ pyrano_vars = [
     ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
     ]
 
-pyrano_vars = [
-    ['GHI', 'N_90', 'N_45'],
-    ['GHI', 'E_45', 'N_45'],
-    ['GHI', 'S_45', 'W_45'],
-    ['GHI', 'E_45', 'W_45']]
-
-pyrano_vars = [
-    ['GHI', 'E_45', 'N_45']]
+# pyrano_vars = [
+#     ['GHI', 'N_90', 'N_45'],
+#     ['GHI', 'E_45', 'N_45'],
+#     ['GHI', 'S_45', 'W_45'],
+#     ['GHI', 'E_45', 'W_45']]
 
 # Load GLOB data
 ds_glob = fct.read_netcdf(glob_datafile)
@@ -141,5 +138,4 @@ f"\
 #     # Execute the script
 #     exec(script_code)
     
-
-
+################################ END ##########################################

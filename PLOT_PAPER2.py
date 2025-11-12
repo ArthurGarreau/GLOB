@@ -461,9 +461,9 @@ cbar.ax.tick_params(labelsize=14)  # Adjust the size as needed
 plt.tight_layout(rect=[0, 0, 0.9, 0.95])
 
 # Save the plot
-#fig.savefig(FIG_PATH / "Figure_all" / "annual_avg_polar_heatmap_GLOB_meas_2023-24.png", dpi=300, bbox_inches='tight')
-#fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 8.png", dpi=300, bbox_inches='tight')
-#fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 8.pdf", format='pdf', bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_all" / "annual_avg_polar_heatmap_GLOB_meas_2023-24.png", dpi=300, bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_low_res" / "Figure 8.png", dpi=300, bbox_inches='tight')
+fig.savefig(FIG_PATH / "Figure_high_res" / "Figure 8.pdf", format='pdf', bbox_inches='tight')
 # plt.close()
 
 # %% Fig 9: Most used pyranometers for estimations with a combination of 3 (Polar Heatmap)

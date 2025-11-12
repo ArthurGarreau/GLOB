@@ -28,7 +28,7 @@ from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
 # Parameters
-method = 'linear'; year = 2025; f = 10 #min data frequency
+method = 'nonlinear'; year = 2025; f = 10 #min data frequency
 
 ############################## File Paths #####################################
 glob_datafile = DATA_PATH / "GLOB_data" / f"GLOB_data_10min_{year}.nc"
@@ -206,4 +206,4 @@ with open(output_file, 'w') as file:
 results_df.to_excel(output_file, sheet_name='Sheet1', index=False)
 print(f"Error metrics saved to {output_file}")
 
-
+################################ END ##########################################
