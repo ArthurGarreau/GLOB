@@ -1,2 +1,0 @@
-DATA_toshare/GLOB_data/*.nc filter=lfs diff=lfs merge=lfs -text
-DATA_toshare/NYA_BSRN_data/*.tab filter=lfs diff=lfs merge=lfs -text
