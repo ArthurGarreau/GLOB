@@ -5,6 +5,7 @@
 **GLOB** is a Python-based toolkit for analyzing solar irradiance data from a 26-pyranometer array (Apogee SP-110) deployed in Svalbard. This project is part of a PhD research at The University Centre in Svalbard, partly funded by RCN through the Arctic Field Grant (project nr. 356439, RiS ID 12666) and the ZEESA project (project nr. 336342).
 
 The data from GLOB have been made publicly and freely available for this study on the Arctic Data Centre platform: https://adc.met.no/
+Garreau, A., Shestov, A., & Sikora, S. (2025). Global tilted irradiance on 25 planes measured in Svalbard. Norwegian Meteorological Institute. https://doi.org/10.21343/VSD8-SG66
 
 ---
 
