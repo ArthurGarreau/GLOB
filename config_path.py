@@ -10,9 +10,9 @@ from pathlib import Path
 #### MAIN PATHS ####
 SCRIPT_PATH = Path(".")
 # Location to output plots
-FIG_PATH = SCRIPT_PATH / ".." / "FIGURES" 
+FIG_PATH = SCRIPT_PATH / "../.." / "FIGURES" 
 # Location to retrieve data for estimations
-DATA_PATH = SCRIPT_PATH / "DATA_toshare" 
+DATA_PATH = SCRIPT_PATH / "../../.." / "DATA_PhD" / "GLOB" 
 
 #### SECONDARY PATHS ####
 B_D_DATA_PATH = DATA_PATH / "Estim_Beam_Diffuse"

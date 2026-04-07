@@ -21,117 +21,111 @@ Date: April 24, 2025
 
 import numpy as np
 import pandas as pd
-import pvlib
 from datetime import datetime
 import re
 from config_path import DATA_PATH
 import glob_functions_calculation as fct
 
-method = 'nonlinear'; year = 2025; f = 10 #min data frequency
+year = '2025'; f = 10 #min data frequency
 
 pyrano_vars = [
-    ['GHI', 'N_45', 'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45', 'E_90', 'E_135',
-     'SE_45', 'SE_90', 'SE_135', 'S_45', 'S_90', 'S_135', 'SW_45', 'SW_90', 'SW_135',
-     'W_45', 'W_90', 'W_135', 'NW_45', 'NW_90', 'NW_135'],
-    ['GHI', 'N_45', 'N_90', 'N_135', 'E_45', 'E_90', 'E_135',
-     'S_45', 'S_90', 'S_135', 'W_45', 'W_90', 'W_135'],
-    ['GHI', 'N_45', 'N_90', 'E_45', 'E_90', 'S_45', 'S_90', 'W_45', 'W_90'],
-    ['GHI', 'N_45', 'E_45', 'S_45', 'W_45']
+    # ['GHI', 'N_45', 'N_90', 'N_135', 'NE_45', 'NE_90', 'NE_135', 'E_45', 'E_90', 'E_135',
+    #  'SE_45', 'SE_90', 'SE_135', 'S_45', 'S_90', 'S_135', 'SW_45', 'SW_90', 'SW_135',
+    #  'W_45', 'W_90', 'W_135', 'NW_45', 'NW_90', 'NW_135'],
+    # ['GHI', 'N_45', 'N_90', 'N_135', 'E_45', 'E_90', 'E_135',
+    #  'S_45', 'S_90', 'S_135', 'W_45', 'W_90', 'W_135'],
+    # ['GHI', 'N_45', 'N_90', 'E_45', 'E_90', 'S_45', 'S_90', 'W_45', 'W_90'],
+    # ['GHI', 'N_45', 'E_45', 'S_45', 'W_45'],
+    # ['N_45', 'E_45', 'S_45', 'W_45'],
+    ['GHI', 'E_45', 'S_45', 'W_45'],
+    # ['GHI', 'N_90', 'N_45'],
+    # ['GHI', 'E_45', 'N_45'],
+    # ['GHI', 'S_45', 'W_45'],
     ]
 
-# pyrano_vars = [
-#     ['GHI', 'N_90', 'N_45'],
-#     ['GHI', 'E_45', 'N_45'],
-#     ['GHI', 'S_45', 'W_45'],
-#     ['GHI', 'E_45', 'W_45']] 
-
-### Define the date range with timezone-aware datetime objects
-if year == 2023: start_date, end_date = (f'{year}-03-14', f'{year}-10-13') 
-if year == 2024: start_date, end_date = (f'{year}-04-14', f'{year}-10-13') 
-if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-09-05') 
 
 ### Define the range of tilt and azimuth angles
 tilt_angles_calc = np.arange(0, 181, 5)
 azimuth_angles_calc = np.arange(-180, 180, 15)
 azimuth_angles = np.arange(0, 360, 15)
 
-for pyrano_var in pyrano_vars:
-    if len(pyrano_var)==3: pyrano_var_name = pyrano_var
-    else: pyrano_var_name = len(pyrano_var)
-        
+for method in ['linear', 'nonlinear']:
+    for pyrano_var in pyrano_vars:
+        if len(pyrano_var)==3: pyrano_var_name = pyrano_var
+        else: pyrano_var_name = len(pyrano_var)
+            
 ############################## File Paths #####################################
-    input_filename = DATA_PATH / "Estim_Beam_Diffuse" / \
-        f"{year}_estimation_beam_diffuse_{f}min_{method}_{pyrano_var_name}pyrano.csv"
-    output_file =  DATA_PATH / "Estim_GTI" / \
-        f"{year}_estimation_GTI_{f}min_{method}_{pyrano_var_name}pyrano.csv"
+        input_filename = DATA_PATH / "Estim_Beam_Diffuse" / \
+            f"{year}_estimation_beam_diffuse_{f}min_{method}_{pyrano_var_name}pyrano.csv"
+        output_file =  DATA_PATH / "Estim_GTI" / \
+            f"{year}_estimation_GTI_{f}min_{method}_{pyrano_var_name}pyrano.csv"
 ###############################################################################
-    
-    # Load and filter data
-    glob_estim_data = pd.read_csv(input_filename,parse_dates=['Timestamp'],index_col='Timestamp',
-                             sep='\t',header=10)
-    glob_estim_data = glob_estim_data.sort_index()
-    glob_estim_data = glob_estim_data.loc[start_date:end_date]
-    
-    # Find the pyranometers removed for the beam/diffuse estimations
-    pyrano_used = fct.find_content_between_braces(input_filename, line_number=5)
-    pyrano_missing = fct.find_missing_elements(pyrano_used)
-    
-    ### Define the location
-    # Read the first few lines of the file to find the location
-    with open(input_filename, 'r') as file:
-        header_lines = [next(file) for _ in range(6)]  # Read first 6 lines
-    # Join the header lines and search for the location pattern
-    header_text = ''.join(header_lines)
-    match = re.search(r'Location:\s*(\d+\.\d+)\s*[NnSs]\s*(\d+\.\d+)\s*[EeWw]', header_text)
-    lat_glob, lon_glob = float(match.groups()[0] ), float( match.groups()[1] )
-    
-    # Extract necessary columns
-    beam = glob_estim_data['Beam'].values; diffuse = glob_estim_data['Diffuse'].values
-    albedo = glob_estim_data['Albedo'].values
-    beam_prime = glob_estim_data['Beam_prime']; diffuse_prime = glob_estim_data['Diffuse_prime']
-    timestamps = glob_estim_data.index
-    solar_angles = fct.calculate_solar_angles(timestamps, lat_glob, lon_glob)
-    theta_z = solar_angles['zenith'].values; theta_z[theta_z > 88] = np.nan
-    
-    # Calculate irradiance for each combination of tilt and azimuth angles
-    df_results = fct.calculate_GTI_for_orientations(
-        solar_angles, tilt_angles_calc, azimuth_angles_calc, azimuth_angles,
-        beam_prime, diffuse_prime, albedo, theta_z, lat_glob, lon_glob
-    )
         
-    # Set the index to the Timestamp column, filter out negative values and round the values
-    df_results.set_index(timestamps, inplace=True)
-    df_results = df_results.where(df_results >= 0, np.nan)
-    df_results = df_results.round().astype('Int64')
-    
-    # Write the header and units to the file
-    # Get the current date
-    today = datetime.now().strftime("%Y-%m-%d")
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    
-    header = \
-f"\
-# Date of production: {current_date}\n\
-# Produced by: Arthur Garreau\n\
-# Estimation of solar irradiance for multiple orientations\
- (refer to Eq. 2.1 in Faiman et al. (1992)). Each column represents an\n\
-# estimation for a specific tilt and azimuth, denoted as gti.azimuth_tilt.\n\
-# Location: {lat_glob}N {lon_glob}E\n\
-# The orientations missing are: {pyrano_missing}.\n\
-# The orientations used are : {pyrano_used}\n\
-#\n\
-#\n\
-# [UTC]\t[W m-2]\n"
-    
-    # Open the file and write the header and units
-    with open(output_file, 'w', encoding='utf-8') as file:
-        file.write(header)
-    
-    try:
-        df_results.to_csv(output_file, mode= 'a', sep = "\t", na_rep ="NaN")
-        print(f"Results saved to\n {output_file}")
-    except Exception as e:
-        print(f"Error saving results for\n {output_file}: {e}")
+        # Load and filter data
+        glob_estim_data = pd.read_csv(input_filename,parse_dates=['Timestamp'],index_col='Timestamp',
+                                 sep='\t',header=10)
+        glob_estim_data = glob_estim_data.sort_index()
+        
+        # Find the pyranometers removed for the beam/diffuse estimations
+        pyrano_used = fct.find_content_between_braces(input_filename, line_number=5)
+        pyrano_missing = fct.find_missing_elements(pyrano_used)
+        
+        ### Define the location
+        # Read the first few lines of the file to find the location
+        with open(input_filename, 'r') as file:
+            header_lines = [next(file) for _ in range(6)]  # Read first 6 lines
+        # Join the header lines and search for the location pattern
+        header_text = ''.join(header_lines)
+        match = re.search(r'Location:\s*(\d+\.\d+)\s*[NnSs]\s*(\d+\.\d+)\s*[EeWw]', header_text)
+        lat_glob, lon_glob = float(match.groups()[0] ), float( match.groups()[1] )
+        
+        # Extract necessary columns
+        beam = glob_estim_data['Beam'].values; diffuse = glob_estim_data['Diffuse'].values
+        albedo = glob_estim_data['Albedo'].values
+        beam_prime = glob_estim_data['Beam_prime']; diffuse_prime = glob_estim_data['Diffuse_prime']
+        timestamps = glob_estim_data.index
+        solar_angles = fct.calculate_solar_angles(timestamps, lat_glob, lon_glob)
+        theta_z = solar_angles['zenith'].values; theta_z[theta_z > 88] = np.nan
+        
+        # Calculate irradiance for each combination of tilt and azimuth angles
+        df_results = fct.calculate_GTI_for_orientations(
+            solar_angles, tilt_angles_calc, azimuth_angles_calc, azimuth_angles,
+            beam_prime, diffuse_prime, albedo, theta_z, lat_glob, lon_glob
+        )
+            
+        # Set the index to the Timestamp column, filter out negative values and round the values
+        df_results.set_index(timestamps, inplace=True)
+        df_results = df_results.where(df_results >= 0, np.nan)
+        df_results = df_results.round().astype('Int64')
+        
+        # Write the header and units to the file
+        # Get the current date
+        today = datetime.now().strftime("%Y-%m-%d")
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        
+        header = \
+    f"\
+    # Date of production: {current_date}\n\
+    # Produced by: Arthur Garreau\n\
+    # Estimation of solar irradiance for multiple orientations\
+     (refer to Eq. 2.1 in Faiman et al. (1992)). Each column represents an\n\
+    # estimation for a specific tilt and azimuth, denoted as gti.azimuth_tilt.\n\
+    # Location: {lat_glob}N {lon_glob}E\n\
+    # The orientations missing are: {pyrano_missing}.\n\
+    # The orientations used are : {pyrano_used}\n\
+    #\n\
+    #\n\
+    # [UTC]\t[W m-2]\n"
+        
+        # Open the file and write the header and units
+        with open(output_file, 'w', encoding='utf-8') as file:
+            file.write(header)
+        
+        try:
+            df_results.to_csv(output_file, mode= 'a', sep = "\t", na_rep ="NaN")
+            print(f"Results saved to\n {output_file}")
+        except Exception as e:
+            print(f"Error saving results for\n {output_file}: {e}")
 
 
 # %% CALC GTI with beam and diffuse from Ny-Ålesund
@@ -142,7 +136,7 @@ import glob_functions_calculation as fct
 from config_path import DATA_PATH
 
 # Parameters
-year = 2025; f = 10 #min data frequency
+f = 10 #min data frequency
 ############################## File Paths #####################################
 bsrn_datafile = DATA_PATH / "NYA_BSRN_data" / "NYA_radiation_2025-all.tab"
 
@@ -155,7 +149,7 @@ bsrn_data_full = pd.read_csv(bsrn_datafile, sep='\t', skiprows=24,
 bsrn_data_full.index = bsrn_data_full.index.tz_localize('UTC')
 bsrn_data_full = bsrn_data_full.rename_axis('Timestamp')
 bsrn_data_full = bsrn_data_full.resample(f'{f}min').first()
-if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-09-05') 
+start_date, end_date = ('2025-03-16', '2025-09-05') 
 bsrn_data_full = bsrn_data_full.loc[start_date:end_date]
 
 lat_nya = 78.922700; lon_nya = 11.927300
@@ -183,8 +177,8 @@ azimuth_angles_names = np.arange(0, 360, 15)
 
 # Calculate irradiance for each combination of tilt and azimuth angles
 df_results = fct.calculate_GTI_for_orientations(
-    solar_angles, tilt_angles_calc, azimuth_angles_calc, azimuth_angles,
-    beam_prime, diffuse_prime, albedo, theta_z, lat_glob, lon_glob
+    solar_angles, tilt_angles_calc, azimuth_angles_calc, azimuth_angles_names,
+    beam_prime, diffuse_prime, albedo, theta_z, lat_nya, lon_nya
 )
 # Set the index to the Timestamp column, filter out negative values and round the values
 df_results.set_index(timestamps, inplace=True)

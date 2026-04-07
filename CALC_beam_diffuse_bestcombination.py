@@ -20,10 +20,12 @@ Date: November 22, 2024
 # %% Load Libraries
 import pandas as pd
 import numpy as np
+import xarray as xr
 from itertools import combinations
 from datetime import datetime
 from config_path import DATA_PATH
 import glob_functions_calculation as fct
+
 
 method = 'linear'; year = 2025; f = 10 #min data frequency
 
@@ -36,12 +38,11 @@ bsrn_datafile = DATA_PATH / "NYA_BSRN_data" / "NYA_radiation_2025-all.tab"
 glob_datafile = DATA_PATH / "GLOB_data" / f"GLOB_data_{f}min_{year}.nc"
 
 output_file = DATA_PATH / "NYA_BSRN_data"  / \
-    f"{year}_bestestimation_beam_diffuse_{f}min_{method}.csv"
+    f"{year}_bestestimation_beam_diffuse_{f}min_{method}_2.csv"
 ###############################################################################
 
 # Generate all combinations of pyrano_var
 combs = list(combinations(pyrano_vars, 3))
-# combs_with_ghi = [comb + ('GHI',) for comb in combs]
 
 # Load NYA data (true_estimation)
 df_NYA = pd.read_csv(bsrn_datafile, sep='\t', skiprows=24, parse_dates=['Date/Time'], index_col='Date/Time')
@@ -50,13 +51,13 @@ df_NYA = df_NYA.resample(f'{f}min').first()
 true_estimations = df_NYA[['DIF', 'DIR']]
 
 # Load GLOB data
-ds_glob = fct.read_netcdf(glob_datafile)
+ds_glob = xr.open_dataset(glob_datafile, engine="h5netcdf")
 lat_glob = float(ds_glob.lat.values); lon_glob = float(ds_glob.lon.values)
 
 # List to store all results
 all_results = []
 # Create a daily date range for the specified month and year
-if year == 2025: start_date, end_date = (f'{year}-03-16', f'{year}-07-31')
+start_date, end_date = (f'{year}-08-01', f'{year}-09-05')
 dates = pd.date_range(start=start_date, end=end_date, freq='D')
 # % Beam and Diffuse Irradiance Calculation
 for date in dates:
@@ -118,7 +119,6 @@ with open(output_file, 'w', encoding='utf-8') as file:
 
 # Append the DataFrame to the file
 df_all_results.to_csv(output_file, index=True, mode='a', sep='\t', na_rep='NaN', encoding='utf-8')
-
 ds_glob.close()
 
 ################################ END ##########################################

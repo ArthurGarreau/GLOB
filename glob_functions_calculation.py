@@ -247,90 +247,6 @@ def estimate_diffuse_beam(pyrano_var, glob_value, lat, lon, method='linear'):
     else:
         return [np.nan, np.nan, np.nan, np.nan, np.nan]
 
-def estimate_diffuse_beam_monte_carlo(pyrano_var, glob_value, lat, lon, n_simulations, error):
-    """
-    Modified estimate_diffuse_beam_faiman function for performing the Monte Carlo calculations.
-    This function is made for calculating the error propagation of the 
-    measurements in the estimations.
-
-    Parameters:
-        variables (list): List of GLOB plane names.
-        glob_value (pd.DataFrame): Global irradiance and solar angles values
-        obtained from the NetCDF GLOB dataset.
-        lat (float): Latitude of the location.
-        lon (float): Longitude of the location.
-        n_simulations (int): Number of Monte Carlo simulations.
-        error (float): Error margin for simulations.
-
-    Returns:
-        tuple: Estimated diffuse and beam irradiance.
-    """
-    
-    table_azim_incli = create_variable_table(pyrano_var)
-    GTI_glob = np.asarray(glob_value[table_azim_incli.index], dtype=float)
-    # Interpolate NaN values in GTI_glob
-    # GTI_glob = pd.Series(GTI_glob).interpolate(method='linear').values
-   
-    inclinations = table_azim_incli['inclination'].values
-    azimuths = table_azim_incli['azimuth'].values
-    
-    # Necessary solar angles for the geometry calculation.
-    # Can also be calculated with the function 'solar_angle_calculation'
-    # if no in the initial dataset.
-    solar_angles = calculate_solar_angles(glob_value.name, lat, lon).squeeze()
-    # solar_angles = glob_value[['zenith','hour_angle', 'declination']] 
-    
-    b = np.array(calculate_beam_coefficient(solar_angles, inclinations, azimuths, lat, lon))
-    d = np.array(calculate_diffuse_coefficient(inclinations))
-    r = np.array(calculate_reflected_coefficient(inclinations))
-    X = np.column_stack((b, d, r))
-    # Remove the NaN of the coefficients table
-    rows_with_nan = np.isnan(X).any(axis=1)
-    X = X[~rows_with_nan]
-    b, d, r = X[:, 0], X[:, 1], X[:, 2]
-
-    try:
-        # Monte Carlo simulation
-        B_estimates = np.zeros(n_simulations)
-        D_estimates = np.zeros(n_simulations)
-        albedo = glob_value['albedo']
-
-        for i in range(n_simulations):
-            albedo_noisy = albedo * np.random.normal(1, error, size=1)
-            GTI_glob_noisy = GTI_glob * np.random.normal(1, error, size=1)
-            initial_guess = [1, 1]
-            # Add bounds if applicable
-            bounds = ([0, 0], [np.inf, np.inf])
-            
-            results = least_squares(
-                least_squares_residuals,
-                initial_guess,
-                bounds=bounds,
-                # args=(b, d, r, GTI_glob, albedo_noisy),
-                args=(b, d, r, GTI_glob_noisy, albedo),
-                max_nfev=100  # Increase maximum number of function evaluations
-            )
-            D_prime, B_prime = results.x
-            zenith = glob_value['zenith']  # degrees
-            cos_z = np.cos(np.radians(zenith))
-            I_0 = pvlib.irradiance.get_extra_radiation(glob_value.name) # glob_value.name = timestamp
-            if not (np.isnan(D_prime) and np.isnan(B_prime)):
-                D, B = calculate_D_and_B(I_0, cos_z, D_prime, B_prime)
-                
-                if D > 1 and D < 1372 and B > 1 and B < 1372:
-                    D_estimates[i] = D
-                    B_estimates[i] = B        
-                else:
-                    D_estimates[i] = np.nan
-                    B_estimates[i] = np.nan
-                    
-    except Exception:
-        return (np.nan, np.nan)
-    if zenith < 90:
-        return (D_estimates, B_estimates)
-    else:
-        return (np.nan, np.nan)
-
 def find_best_estimation(combs, glob_value, lat, lon, true_estimation, method='linear'):
     """
     Find the best combination of variables for the least-square estimation of
@@ -388,7 +304,8 @@ def calculate_D_and_B(I_0, cos_z, D_prime, B_prime):
         tuple: Estimated diffuse and beam irradiance.
     """
     a = 1
-    b = (I_0 - B_prime)*cos_z - D_prime
+    b = (I_0 - B_prime)*cos_z - D_prime #Modified Hay & Davies (!!!cos_z!!!)
+    # b = (I_0*cos_z - B_prime) - D_prime #Hay and Davies
     c = -D_prime * I_0 * cos_z
     # Calculate the discriminant
     discriminant = b**2 - 4*a*c
@@ -403,10 +320,13 @@ def calculate_D_and_B(I_0, cos_z, D_prime, B_prime):
         # Select the positive root
         if D1 > 0:
             D = D1
-            B = I_0/cos_z * (1 - D_prime / D)
+            B = I_0/cos_z * (1 - D_prime / D) #Modified Hay & Davies (!!!cos_z!!!)
+            # B = I_0 * (1 - D_prime / D) #Hay and Davies
         elif D2 > 0:
             D = D2
-            B = I_0/cos_z * (1 - D_prime / D)
+            B = I_0/cos_z * (1 - D_prime / D) #Modified Hay & Davies (!!!cos_z!!!)
+            # B = I_0 * (1 - D_prime / D) #Hay and Davies
+
         else:
             D, B = np.nan, np.nan
     return D, B
@@ -427,9 +347,13 @@ def calculate_Dprime_and_Bprime(I_0, zenith, D, B):
     """
     cos_z = np.cos(np.radians(zenith))
     # Calculate B' using the formula
-    B_prime = B * (cos_z + D/I_0)
+    B_prime = B * (cos_z + D/I_0) #Modified Hay & Davies
+    # B_prime = B * (cos_z + D/I_0) #Hay & Davies
+
     # Calculate D' using the formula
-    D_prime = D * (1 - B*cos_z/I_0)
+    D_prime = D * (1 - B*cos_z/I_0) #Modified Hay & Davies (!!!one more cos_z!!!)
+    # D_prime = D * (1 - B/I_0) #Hay & Davies
+
     return D_prime, B_prime
 
 def calculate_GTI_for_orientations(
@@ -629,10 +553,15 @@ def create_gti_estimation_label(validation_pyrano):
         'W': 270,
         'NW': 315
     }
+    
     for item in validation_pyrano:
-        direction, tilt = item.split('_')
-        azimuth = direction_to_azimuth[direction]
-        gti_estimation_label[item] = f'gti{azimuth}_{tilt}'
+        if item == 'GHI':
+            gti_estimation_label[item] = 'gti0_0'
+        else:            
+            direction, tilt = item.split('_')
+            azimuth = direction_to_azimuth[direction]
+            gti_estimation_label[item] = f'gti{azimuth}_{tilt}'
+        
     return gti_estimation_label
 
 def create_variable_table(variables):
@@ -658,6 +587,28 @@ def create_variable_table(variables):
             table.loc[var] = [azimuth_mapping[direction], int(beta)]
     return table
 
+
+# Metric calculation functions
+def calculate_rmse(y_true, y_pred):
+    return np.sqrt(np.nanmean((y_true - y_pred) ** 2))
+
+def calculate_nrmse(y_true, y_pred):
+    rmse = calculate_rmse(y_true, y_pred)
+    return rmse / (np.nanmean(y_true[~np.isnan(y_pred)])) *100
+
+def calculate_mbe(y_true, y_pred):
+    return np.nanmean(y_pred - y_true)
+
+def calculate_nmbe(y_true, y_pred):
+    mbe = calculate_mbe(y_true, y_pred)
+    return mbe / np.nanmean(y_true[~np.isnan(y_pred)]) *100
+
+def calculate_mae(y_true, y_pred):
+    return np.nanmean(np.abs(y_pred - y_true))
+
+def calculate_nmae(y_true, y_pred):
+    mbe = calculate_mae(y_true, y_pred)
+    return mbe / np.nanmean(y_true[~np.isnan(y_pred)]) *100
 
 def read_netcdf(file_path):
     """
